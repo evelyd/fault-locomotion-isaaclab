@@ -12,4 +12,4 @@ An IsaacLab DirectEnv for quadrupedal locomotion under motor failures, with supp
 
 
 
-Code will be release soon.
+Code will be released soon.
