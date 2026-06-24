@@ -8,7 +8,7 @@
 </div>
 
 # fault-loco-isaaclab
-An IsaacLab direct env for locomotion under motor's failures on multiple quadruped robots, with sim-to-sim and sim-to-real pipelines.
+An IsaacLab DirectEnv for quadrupedal locomotion under motor's failures, with multiple quadruped robots support, sim-to-sim and sim-to-real pipelines.
 
 
 
