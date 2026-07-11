@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Mujoco%20-v3.7.0-blue" alt="Mujoco v3.7.0" style="margin-bottom: 1px;">
   <div style="display: flex; justify-content: space-around;">
     <img src="./gifs/four_legs.gif" alt="4legs" width="32%">
-    <img src="./gifs/twp_legs.gif" alt="2legs" width="32%">
+    <img src="./gifs/two_legs.gif" alt="2legs" width="32%">
     <img src="./gifs/three_legs.gif" alt="4legs" width="32%">
   </div>
 </div>
