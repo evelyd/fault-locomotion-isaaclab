@@ -11,16 +11,24 @@
 An IsaacLab DirectEnv for quadrupedal locomotion under motor failures, with support for multiple quadruped robots, sim-to-sim, and sim-to-real pipelines.
 
 
-
-Code will be released soon.
+Features:
+- [Concurrent State Estimator](https://arxiv.org/pdf/2202.05481)
+- [Rapid Motor Adaptation](https://arxiv.org/pdf/2107.04034)
+- [Mixture-of-Expert](https://arxiv.org/abs/2606.25965)
+- Sim-to-Sim in [Mujoco](https://github.com/google-deepmind/mujoco)
+- Sim-to-Real in ROS2
 
 
 Real-world deployment via:
 - [muse](https://github.com/iit-DLSLab/muse/tree/unitree_sdk) for state estimation (if no concurrent state estimation is used)
 - [unitree-ros2-dls](https://github.com/iit-DLSLab/unitree-ros2-dls) for unitree robot communication
 
-A list of robots and environments available is described below:
 
+A list of robots and environments available are described below:
+
+| Robot Model         | Environment Name Pattern                                   |
+|---------------------|------------------------------------------------------------|
+| [Aliengo](https://github.com/iit-DLSLab/gym-quadruped/tree/master/gym_quadruped/robot_model/aliengo), [Go2](https://github.com/iit-DLSLab/gym-quadruped/tree/master/gym_quadruped/robot_model/go2) | FaultLocomotion-**RobotModel**-Flat-Blind <br> FaultLocomotion-**RobotModel**-Rough-Blind <br> FaultLocomotion-**RobotModel**-Rough-Vision |
 
 
 
@@ -29,3 +37,24 @@ A list of robots and environments available is described below:
 If you want only to deploy a trained policy on your robot, continue on [README_DEPLOY](./README_DEPLOY.md) otherwise on [README_TRAIN](./README_TRAIN.md).
 
 **For the train, check first the compatibility with IsaacLab and rsl-rl at the top of this readme. They indicate the releases that we tested.**
+
+
+## Citing this work
+
+If you find the work useful, please consider citing one of our works:
+
+#### [Mixture-of-Experts RL for Fault-Tolerant Legged Locomotion (ArXiv)](https://arxiv.org/abs/2606.25965)
+
+```
+@inproceedings{turrisi2026moefault,
+  author={Turrisi, Giulio and Pali, Ozan and Oneto, Luca and Semini, Claudio},
+  booktitle={arXiv}, 
+  title={Mixture-of-Experts RL for Fault-Tolerant Legged Locomotion}, 
+  year={2026},
+  doi={arXiv:2606.25965}
+}
+```
+
+## Maintainer
+
+This repository is maintained by [Giulio Turrisi](https://github.com/giulioturrisi)
