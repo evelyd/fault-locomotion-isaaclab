@@ -400,7 +400,7 @@ def feet_height_clearance_aperiodic(self):
     feet_height_clearance_aperiodic = feet_height_clearance_aperiodic_FL + feet_height_clearance_aperiodic_FR
     feet_height_clearance_aperiodic += feet_height_clearance_aperiodic_RL + feet_height_clearance_aperiodic_RR
 
-    feet_height_clearance_aperiodic_mask = num_legs_down >= 1
+    feet_height_clearance_aperiodic_mask = num_legs_down >= 0
     feet_height_clearance_aperiodic = feet_height_clearance_aperiodic * feet_height_clearance_aperiodic_mask
 
     return feet_height_clearance_aperiodic
