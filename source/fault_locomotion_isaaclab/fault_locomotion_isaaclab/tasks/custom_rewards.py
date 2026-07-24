@@ -87,10 +87,14 @@ def track_orientation_l2(self):
 
     base_orientation_pitch = torch.square(terrain_pitch - root_pitch_w)
     base_orientation_pitch = torch.where(
-        num_legs_down == 1 & legs_down[:, 0], torch.square(terrain_pitch - 0.05 - root_pitch_w), base_orientation_pitch
+        (num_legs_down == 1) & (legs_down[:, 0] | legs_down[:, 1]),
+        torch.square(terrain_pitch - 0.05 - root_pitch_w),
+        base_orientation_pitch,
     )
     base_orientation_pitch = torch.where(
-        num_legs_down == 1 & legs_down[:, 2], torch.square(terrain_pitch + 0.05 - root_pitch_w), base_orientation_pitch
+        (num_legs_down == 1) & (legs_down[:, 2] | legs_down[:, 3]),
+        torch.square(terrain_pitch + 0.05 - root_pitch_w),
+        base_orientation_pitch,
     )
     base_orientation_pitch = torch.where(num_legs_down == 2, base_orientation_pitch * 0.0, base_orientation_pitch)
 
@@ -258,7 +262,6 @@ def feet_air_time(self) -> torch.Tensor:
     
     legs_status = (self._per_leg_joint_status.all(dim=2)).float()
     legs_status = legs_status.reshape(legs_status.shape[0], -1)
-    num_legs_down = (~legs_status.bool()).sum(dim=1)
 
     desired_contact_time = 0.47
     desired_air_time = 0.25
@@ -307,10 +310,7 @@ def feet_air_time(self) -> torch.Tensor:
 
     should_move = torch.norm(self._commands[:, :3], dim=1) > 0.01
 
-    feet_air_time =torch.sum(feet_reward_per_leg, dim=1) * should_move
-
-    feet_air_time_mask = num_legs_down >= 0
-    feet_air_time = feet_air_time * feet_air_time_mask
+    feet_air_time = torch.sum(feet_reward_per_leg * legs_status, dim=1) * should_move
 
     return feet_air_time
 

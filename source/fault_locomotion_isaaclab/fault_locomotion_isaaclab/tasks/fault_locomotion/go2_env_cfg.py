@@ -296,8 +296,8 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     desired_feet_height = 0.05
 
     # Type of failures, put 1 to the one that should happen, and 0 to the rest
-    all_fine = 1
-    rl_rr_all_failed = 1
+    all_fine = 0
+    rl_rr_all_failed = 0
     fl_thigh_calf_failed = 0
     fr_thigh_calf_failed = 0
     rl_thigh_calf_failed = 0
@@ -324,7 +324,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     rr_hip_calf_failed = 0
     fl_all_failed = 1
     fr_all_failed = 0
-    rl_all_failed = 1
+    rl_all_failed = 0
     rr_all_failed = 0
     failure_type_activation = [
                         all_fine, 
