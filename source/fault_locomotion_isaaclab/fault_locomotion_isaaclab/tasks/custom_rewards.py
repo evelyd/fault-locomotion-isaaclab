@@ -312,6 +312,9 @@ def feet_air_time(self) -> torch.Tensor:
 
     feet_air_time = torch.sum(feet_reward_per_leg * legs_status, dim=1) * should_move
 
+    feet_air_time_mask = torch.sum(legs_status, dim=1) >= 0
+    feet_air_time = feet_air_time * feet_air_time_mask
+
     return feet_air_time
 
 
