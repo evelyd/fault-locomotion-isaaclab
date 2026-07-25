@@ -17,6 +17,7 @@ Features:
 - [Concurrent State Estimator](https://arxiv.org/pdf/2202.05481)
 - [Rapid Motor Adaptation](https://arxiv.org/pdf/2107.04034)
 - [Mixture-of-Experts](https://arxiv.org/abs/2606.25965)
+- [Morphological Symmetries](https://arxiv.org/pdf/2403.17320) 
 - Sim-to-Sim in [Mujoco](https://github.com/google-deepmind/mujoco)
 - Sim-to-Real in ROS2
 

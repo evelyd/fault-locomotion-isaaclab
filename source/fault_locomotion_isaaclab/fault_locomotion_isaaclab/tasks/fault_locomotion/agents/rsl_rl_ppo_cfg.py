@@ -12,6 +12,7 @@ from dataclasses import MISSING
 
 from copy import deepcopy
 from . import moe_cfg
+from . import morphosymm_cfg
 
 
 @configclass
@@ -45,7 +46,11 @@ class FlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     )
 
     # Mixture of Expert Stuff
-    moe_cfg = moe_cfg.moe_cfg    
+    moe_cfg = moe_cfg.moe_cfg   
+
+    # Morphosymm-rl Related Stuff
+    morphologycal_symmetries_cfg = morphosymm_cfg.morphologycal_symmetries_cfg
+ 
 
 
 @configclass
@@ -80,3 +85,7 @@ class RoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
     # Mixture of Expert Stuff
     moe_cfg = moe_cfg.moe_cfg    
+
+    # Morphosymm-rl Related Stuff
+    morphologycal_symmetries_cfg = morphosymm_cfg.morphologycal_symmetries_cfg
+
