@@ -1,4 +1,4 @@
-name: fault_locomotion_isaaclab_ros2_env
+name: fault_locomotion_isaaclab_env
 channels:
 - conda-forge
 - nvidia
