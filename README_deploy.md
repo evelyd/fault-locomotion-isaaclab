@@ -6,8 +6,8 @@
 
 
 ```bash
-conda env create -f mamba_environment_ros2.yaml
-conda activate fault_locomotion_isaaclab_ros2_env
+conda env create -f mamba_environment.yaml
+conda activate fault_locomotion_isaaclab_env
 ```
 
 
