@@ -141,7 +141,9 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
         history_length = 1
 
     use_varying_action_space = False # if used MoE with varying expert_output_dims, check moe_cfg.py
-    observation_space += 1 # expert activation
+    use_moe = False
+    if(use_moe):
+        observation_space += 1 # expert activation
 
     use_imu = False
     

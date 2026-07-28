@@ -403,27 +403,27 @@ class FaultLocomotionEnv(DirectRLEnv):
             observations["policy"] = torch.cat((observations["policy"], height_data), dim=-1)
             observations["critic"] = torch.cat((observations["critic"], height_data), dim=-1)
 
-        # explicit expert_activation: scalar expert id
-        # 0: all legs working
-        # 1: only FL down
-        # 2: only RL down
-        # 3: RL and RR down
-        """joints_status_per_leg_predicted = (
-            joints_status
-            .reshape(self._per_leg_joint_status.shape[0], self._per_leg_joint_status.shape[2], self._per_leg_joint_status.shape[1])
-            .permute(0, 2, 1)
-            .clone()
-        )"""
-        legs_status =  (self._per_leg_joint_status.all(dim=2)).float()
-        legs_status = legs_status.reshape(legs_status.shape[0], -1)
-        legs_down = ~legs_status.bool()
-        num_legs_down = legs_down.sum(dim=1)
-        expert_activation = torch.zeros(self.num_envs, 1, device=self.device)
-        expert_activation[legs_down[:, 0] & (num_legs_down == 1), 0] = 1.0
-        expert_activation[legs_down[:, 2] & (num_legs_down == 1), 0] = 2.0
-        expert_activation[legs_down[:, 2] & legs_down[:, 3] & (num_legs_down == 2), 0] = 3.0
-        observations["policy"] = torch.cat((observations["policy"], expert_activation), dim=-1)
-        observations["critic"] = torch.cat((observations["critic"], expert_activation), dim=-1)
+        # # explicit expert_activation: scalar expert id
+        # # 0: all legs working
+        # # 1: only FL down
+        # # 2: only RL down
+        # # 3: RL and RR down
+        # """joints_status_per_leg_predicted = (
+        #     joints_status
+        #     .reshape(self._per_leg_joint_status.shape[0], self._per_leg_joint_status.shape[2], self._per_leg_joint_status.shape[1])
+        #     .permute(0, 2, 1)
+        #     .clone()
+        # )"""
+        # legs_status =  (self._per_leg_joint_status.all(dim=2)).float()
+        # legs_status = legs_status.reshape(legs_status.shape[0], -1)
+        # legs_down = ~legs_status.bool()
+        # num_legs_down = legs_down.sum(dim=1)
+        # expert_activation = torch.zeros(self.num_envs, 1, device=self.device)
+        # expert_activation[legs_down[:, 0] & (num_legs_down == 1), 0] = 1.0
+        # expert_activation[legs_down[:, 2] & (num_legs_down == 1), 0] = 2.0
+        # expert_activation[legs_down[:, 2] & legs_down[:, 3] & (num_legs_down == 2), 0] = 3.0
+        # observations["policy"] = torch.cat((observations["policy"], expert_activation), dim=-1)
+        # observations["critic"] = torch.cat((observations["critic"], expert_activation), dim=-1)
         # ------------------------------------------------------------------------------------------
 
         return observations
