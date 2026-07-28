@@ -64,6 +64,16 @@ gym.register(
 )
 
 gym.register(
+    id="FaultLocomotion-Go2-Flat-EMLP",
+    entry_point=FaultLocomotionEnv,
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Go2FlatEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlatSymmPPORunnerCfg",
+    },
+)
+
+gym.register(
     id="FaultLocomotion-Go2-Rough-Blind",
     entry_point=FaultLocomotionEnv,
     disable_env_checker=True,
@@ -74,12 +84,32 @@ gym.register(
 )
 
 gym.register(
-    id="FaultLocomotion-Go2-Rough-Vision",
+    id="FaultLocomotion-Go2-Rough-Blind-EMLP",
+    entry_point=FaultLocomotionEnv,
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Go2RoughBlindEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughSymmPPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="FaultLocomotion-Go2-Rough-Vision-EMLP",
     entry_point=FaultLocomotionEnv,
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": Go2RoughVisionEnvCfg,
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughPPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="FaultLocomotion-Go2-Rough-Vision-EMLP",
+    entry_point=FaultLocomotionEnv,
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Go2RoughVisionEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughSymmPPORunnerCfg",
     },
 )
 
@@ -95,7 +125,7 @@ gym.register(
         "env_cfg_entry_point": PegasusFlatEnvCfg,
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlatPPORunnerCfg",
     },
-)  
+)
 
 gym.register(
     id="FaultLocomotion-Pegasus-Rough-Blind",
