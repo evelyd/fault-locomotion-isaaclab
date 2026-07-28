@@ -44,7 +44,7 @@ obs_space_names_actor = [
         #"clock_data",
         "joints_pos",
     ]*int(history_length)
-obs_space_names_actor += ["invariant_scalar"]
+# obs_space_names_actor += ["invariant_scalar"]
 
 
 # Critic OBS
@@ -60,7 +60,7 @@ obs_space_names_critic = [
         #"clock_data",
         "joints_pos",
     ]*int(history_length)
-obs_space_names_critic += ["invariant_scalar"]
+# obs_space_names_critic += ["invariant_scalar"]
 obs_space_names_critic += ["joints_pos", "joints_pos", "invariant_scalar", "invariant_scalar", "clock_data", "clock_data", "clock_data"]
 
 
