@@ -419,9 +419,15 @@ class FaultLocomotionEnv(DirectRLEnv):
         legs_down = ~legs_status.bool()
         num_legs_down = legs_down.sum(dim=1)
         expert_activation = torch.zeros(self.num_envs, 1, device=self.device)
-        expert_activation[legs_down[:, 0] & (num_legs_down == 1), 0] = 1.0
-        expert_activation[legs_down[:, 2] & (num_legs_down == 1), 0] = 2.0
-        expert_activation[legs_down[:, 2] & legs_down[:, 3] & (num_legs_down == 2), 0] = 3.0
+        expert_activation[
+            (legs_down[:, 0] | legs_down[:, 1]) & (num_legs_down == 1), 0
+        ] = 1.0
+        expert_activation[
+            (legs_down[:, 2] | legs_down[:, 3]) & (num_legs_down == 1), 0
+        ] = 2.0
+        expert_activation[
+            legs_down[:, 2] & legs_down[:, 3] & (num_legs_down == 2), 0
+        ] = 3.0
         observations["policy"] = torch.cat((observations["policy"], expert_activation), dim=-1)
         observations["critic"] = torch.cat((observations["critic"], expert_activation), dim=-1)
         # ------------------------------------------------------------------------------------------
