@@ -116,7 +116,7 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
 # from rsl_rl.runners import OnPolicyRunner
-from morphosymm_rl.runners.symm_on_policy_runner import SymmOnPolicyRunner
+from koopman_symmloco_rsl_rl.runners.symm_on_policy_runner import SymmOnPolicyRunner
 import escnn.nn
 
 
