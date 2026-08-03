@@ -42,7 +42,7 @@ obs_space_names_actor = [
         "joints_vel",
         "joints_pos",
         #"clock_data",
-        "joints_pos",
+        "clock_data", "clock_data", "clock_data",  # hip/thigh/calf statuses
     ]*int(history_length)
 obs_space_names_actor += ["invariant_scalar"]
 
@@ -58,10 +58,14 @@ obs_space_names_critic = [
         "joints_vel",
         "joints_pos",
         #"clock_data",
-        "joints_pos",
+        "clock_data", "clock_data", "clock_data",  # hip/thigh/calf statuses
     ]*int(history_length)
 obs_space_names_critic += ["invariant_scalar"]
-obs_space_names_critic += ["joints_pos", "joints_pos", "invariant_scalar", "invariant_scalar", "clock_data", "clock_data", "clock_data"]
+obs_space_names_critic += [    
+        "clock_data", "clock_data", "clock_data",  # P gains
+        "clock_data", "clock_data", "clock_data",  # D gains
+]
+obs_space_names_critic += ["invariant_scalar", "invariant_scalar", "clock_data", "clock_data", "clock_data"]
 
 
 # Action Space
