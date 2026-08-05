@@ -89,47 +89,9 @@ from morphosymm_rl.symm_utils import configure_observation_space_representations
 
 def initialize_dae_model(morphologycal_symmetries_cfg, koopman_cfg, task: str, state_dim: int, action_dim: int, dt: float, device: torch.device, G = None) -> torch.nn.Module:
     """
-    Initializes a Koopman model based on the provided configuration (from train_koopman_cfg.koopman_model).
-    Can also load pre-trained weights if koopman_cfg.load_path is specified.
-
-    Args:
-        koopman_cfg: The Koopman model configuration object from train_koopman_cfg.
-        task (str): The specific DAE task type (e.g., "edae", "ecdae").
-        dt (float): The environment's delta time (from environment).
-        device (torch.device): The torch device (e.g., 'cuda:0', 'cpu').
-        G: Optional predefined group. If None, it will be loaded automatically.
-
-    Returns:
-        torch.nn.Module: An initialized Koopman model (new or loaded).
+    Initializes a Koopman model based on the provided configuration.
     """
-
-    # 1. Extract observation and action names dynamically from koopman_cfg
-    # (Assuming these match your new actor/action space definitions)
-    state_obs_names = morphologycal_symmetries_cfg["obs_space_names_actor"]
-    action_obs_names = morphologycal_symmetries_cfg["action_space_names"]
-    joints_order = morphologycal_symmetries_cfg["joints_order"]
-    robot_name = koopman_cfg.get("name", "a1")
-
-    # 2. Load all unique representations together
-    all_space_names = list(dict.fromkeys([*state_obs_names, *action_obs_names]))
-    loaded_G, representations = configure_observation_space_representations(
-        robot_name, all_space_names, joints_order
-    )
-
-    if G is None:
-        G = loaded_G
-
-    gspace = escnn.gspaces.no_base_space(G)
-
-    # 3. Create FieldTypes by retrieving representations for each observation/action sequence
-    state_type = FieldType(gspace, representations=[representations[name] for name in state_obs_names])
-    action_type = FieldType(gspace, representations=[representations[name] for name in action_obs_names])
-
-    if G is not None:
-        # Ensure that with duplicate reps the size matches the expected dimensions
-        state_type.size = state_dim
-        action_type.size = action_dim
-
+    # 1. Compute Base Dimensions & Params
     obs_state_dim = math.ceil(koopman_cfg["obs_state_ratio"] * state_dim)
     num_hidden_neurons = koopman_cfg["num_hidden_units"]
     if obs_state_dim > num_hidden_neurons:
@@ -137,7 +99,6 @@ def initialize_dae_model(morphologycal_symmetries_cfg, koopman_cfg, task: str, s
 
     activation = koopman_cfg["activation"]
     if not koopman_cfg["equivariant"]:
-        # Ensure class_from_name is imported or defined
         activation = class_from_name("torch.nn", activation)
 
     obs_fn_params = {
@@ -148,9 +109,38 @@ def initialize_dae_model(morphologycal_symmetries_cfg, koopman_cfg, task: str, s
         'batch_norm': koopman_cfg["batch_norm"]
     }
 
+    # 2. Build ESCNN Representations (ONLY for equivariant models)
+    if "ecdae" in task or "edae" in task:
+        # Safely extract single state names, falling back to actor names if missing
+        state_obs_names = morphologycal_symmetries_cfg.get("obs_space_names_single_state")
+        if not isinstance(state_obs_names, list):  # Catches None or MISSING objects
+            state_obs_names = morphologycal_symmetries_cfg["obs_space_names_actor"]
+
+        action_obs_names = morphologycal_symmetries_cfg["action_space_names"]
+        joints_order = morphologycal_symmetries_cfg["joints_order"]
+        robot_name = koopman_cfg.get("name", "a1")
+
+        all_space_names = list(dict.fromkeys([*state_obs_names, *action_obs_names]))
+        loaded_G, representations = configure_observation_space_representations(
+            robot_name, all_space_names, joints_order
+        )
+
+        if G is None:
+            G = loaded_G
+
+        gspace = escnn.gspaces.no_base_space(G)
+
+        state_type = FieldType(gspace, representations=[representations[name] for name in state_obs_names])
+        action_type = FieldType(gspace, representations=[representations[name] for name in action_obs_names])
+
+        if G is not None:
+            state_type.size = state_dim
+            action_type.size = action_dim
+
+
     initial_rng_state = torch.get_rng_state()
 
-    # 5. Initialize the appropriate model
+    # 3. Initialize the appropriate model
     if "edae" in task:
         model = EquivDAE(
             state_rep=state_type.representation,
@@ -198,8 +188,6 @@ def initialize_dae_model(morphologycal_symmetries_cfg, koopman_cfg, task: str, s
         raise ValueError(f"Trying to create DAE model with unsupported task: {task}")
 
     torch.set_rng_state(initial_rng_state)
-
-    # Put the model on the specified device
     model.to(device)
 
     return model

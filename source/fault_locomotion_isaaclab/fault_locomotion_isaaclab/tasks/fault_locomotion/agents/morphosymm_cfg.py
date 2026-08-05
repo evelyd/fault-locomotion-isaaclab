@@ -26,8 +26,11 @@ class MorphologycalSymmetriesCfg:
     """The name of the robot to use inside Morphosymm."""
 
     schedule_fixed_to_adaptive_switch = None
-    """The number of iterations to switch from fixed to adaptive schedule for the symmetry loss. 
+    """The number of iterations to switch from fixed to adaptive schedule for the symmetry loss.
     If None, then no switch will happen. If the scheduler is set to adaptive, not change will be made."""
+
+    obs_space_names_single_state: list[str] | None = MISSING
+    """The observation space names for the single state representation. This is used for DAE latent augmentation. If None, then no single state representation will be used."""
 
 
 # Actor OBS
@@ -48,7 +51,7 @@ obs_space_names_actor += ["invariant_scalar"]
 
 
 # Critic OBS
-obs_space_names_critic = [
+single_state_names = [
         "base_lin_vel",
         "base_ang_vel",
         "gravity",
@@ -59,9 +62,10 @@ obs_space_names_critic = [
         "joints_pos",
         #"clock_data",
         "clock_data", "clock_data", "clock_data",  # hip/thigh/calf statuses
-    ]*int(history_length)
+    ]
+obs_space_names_critic = single_state_names * int(history_length)
 obs_space_names_critic += ["invariant_scalar"]
-obs_space_names_critic += [    
+obs_space_names_critic += [
         "clock_data", "clock_data", "clock_data",  # P gains
         "clock_data", "clock_data", "clock_data",  # D gains
 ]
@@ -74,7 +78,7 @@ action_space_names = ["joints_pos"]
 
 # Joints Order
 joints_order = [
-    "FL_hip_joint", "FR_hip_joint", "RL_hip_joint", "RR_hip_joint", 
+    "FL_hip_joint", "FR_hip_joint", "RL_hip_joint", "RR_hip_joint",
     "FL_thigh_joint", "FR_thigh_joint", "RL_thigh_joint", "RR_thigh_joint",
     "FL_calf_joint", "FR_calf_joint", "RL_calf_joint", "RR_calf_joint"
 ]
@@ -87,6 +91,18 @@ robot_name = "a1"
 morphologycal_symmetries_cfg = MorphologycalSymmetriesCfg(
         obs_space_names_actor = obs_space_names_actor,
         obs_space_names_critic = obs_space_names_critic,
+        action_space_names = action_space_names,
+        joints_order = joints_order,
+        robot_name = robot_name,
+    )
+
+obs_state_ratio = 3
+obs_space_names_critic += single_state_names * int(obs_state_ratio)
+
+dae_morphologycal_symmetries_cfg = MorphologycalSymmetriesCfg(
+        obs_space_names_actor = obs_space_names_actor,
+        obs_space_names_critic = obs_space_names_critic,
+        obs_space_names_single_state = single_state_names,
         action_space_names = action_space_names,
         joints_order = joints_order,
         robot_name = robot_name,
