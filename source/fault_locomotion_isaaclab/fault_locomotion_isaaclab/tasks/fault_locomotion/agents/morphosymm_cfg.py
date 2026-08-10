@@ -35,22 +35,6 @@ class MorphologycalSymmetriesCfg:
 
 # Actor OBS
 history_length = 5
-obs_space_names_actor = [
-        "base_lin_vel",
-        "base_ang_vel",
-        "gravity",
-        "des_base_lin_vel_xy",
-        "des_base_ang_vel_yaw",
-        "joints_pos",
-        "joints_vel",
-        "joints_pos",
-        #"clock_data",
-        "clock_data", "clock_data", "clock_data",  # hip/thigh/calf statuses
-    ]*int(history_length)
-obs_space_names_actor += ["invariant_scalar"]
-
-
-# Critic OBS
 single_state_names = [
         "base_lin_vel",
         "base_ang_vel",
@@ -63,14 +47,18 @@ single_state_names = [
         #"clock_data",
         "clock_data", "clock_data", "clock_data",  # hip/thigh/calf statuses
     ]
+obs_space_names_actor = single_state_names * int(history_length)
+obs_space_names_actor += ["invariant_scalar"]
+
+
+# Critic OBS
 obs_space_names_critic = single_state_names * int(history_length)
-obs_space_names_critic += ["invariant_scalar"]
 obs_space_names_critic += [
         "clock_data", "clock_data", "clock_data",  # P gains
         "clock_data", "clock_data", "clock_data",  # D gains
 ]
 obs_space_names_critic += ["invariant_scalar", "invariant_scalar", "clock_data", "clock_data", "clock_data"]
-
+obs_space_names_critic += ["invariant_scalar"]
 
 # Action Space
 action_space_names = ["joints_pos"]
@@ -96,12 +84,46 @@ morphologycal_symmetries_cfg = MorphologycalSymmetriesCfg(
         robot_name = robot_name,
     )
 
+# add the heightmap to the obs space
+vision_obs_space_names_actor = single_state_names * int(history_length)
+heightmap_name = "heightmap:13x13"
+vision_obs_space_names_actor += [heightmap_name]
+vision_obs_space_names_actor += ["invariant_scalar"]
+vision_obs_space_names_critic = single_state_names * int(history_length)
+vision_obs_space_names_critic += [
+        "clock_data", "clock_data", "clock_data",  # P gains
+        "clock_data", "clock_data", "clock_data",  # D gains
+]
+vision_obs_space_names_critic += ["invariant_scalar", "invariant_scalar", "clock_data", "clock_data", "clock_data"]
+vision_obs_space_names_critic += [heightmap_name]
+vision_obs_space_names_critic += ["invariant_scalar"]
+
+vision_morphologycal_symmetries_cfg = MorphologycalSymmetriesCfg(
+        obs_space_names_actor = vision_obs_space_names_actor,
+        obs_space_names_critic = vision_obs_space_names_critic,
+        action_space_names = action_space_names,
+        joints_order = joints_order,
+        robot_name = robot_name,
+    )
+
 obs_state_ratio = 3
 obs_space_names_critic += single_state_names * int(obs_state_ratio)
 
 dae_morphologycal_symmetries_cfg = MorphologycalSymmetriesCfg(
         obs_space_names_actor = obs_space_names_actor,
         obs_space_names_critic = obs_space_names_critic,
+        obs_space_names_single_state = single_state_names,
+        action_space_names = action_space_names,
+        joints_order = joints_order,
+        robot_name = robot_name,
+    )
+
+# Include the heightmap in the single state representation for the DAE
+vision_obs_space_names_critic += single_state_names * int(obs_state_ratio)
+
+vision_dae_morphologycal_symmetries_cfg = MorphologycalSymmetriesCfg(
+        obs_space_names_actor = vision_obs_space_names_actor,
+        obs_space_names_critic = vision_obs_space_names_critic,
         obs_space_names_single_state = single_state_names,
         action_space_names = action_space_names,
         joints_order = joints_order,

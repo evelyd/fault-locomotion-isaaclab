@@ -20,7 +20,7 @@ from . import koopman_model_cfg
 class FlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 2500
-    save_interval = 50
+    save_interval = 100
     experiment_name = "flat_direct"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
@@ -57,7 +57,7 @@ class FlatSymmPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     class_name = "SymmOnPolicyRunner"
     num_steps_per_env = 24
     max_iterations = 2500
-    save_interval = 50
+    save_interval = 100
     experiment_name = "flat_symm_direct"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
@@ -94,7 +94,7 @@ class FlatCDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     class_name = "DAEOnPolicyRunner"
     num_steps_per_env = 24
     max_iterations = 2500
-    save_interval = 50
+    save_interval = 100
     experiment_name = "flat_cdae_direct"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
@@ -134,7 +134,7 @@ class FlatSymmECDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     class_name = "SymmDAEOnPolicyRunner"
     num_steps_per_env = 24
     max_iterations = 2500
-    save_interval = 50
+    save_interval = 100
     experiment_name = "flat_symm_ecdae_direct"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
@@ -174,7 +174,7 @@ class FlatSymmECDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 class RoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 20000
-    save_interval = 50
+    save_interval = 1000
     experiment_name = "rough_direct"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
@@ -212,7 +212,7 @@ class RoughSymmPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     class_name = "SymmOnPolicyRunner"
     num_steps_per_env = 24
     max_iterations = 20000
-    save_interval = 50
+    save_interval = 1000
     experiment_name = "rough_symm_direct"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
@@ -245,11 +245,48 @@ class RoughSymmPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     morphologycal_symmetries_cfg = morphosymm_cfg.morphologycal_symmetries_cfg
 
 @configclass
+class RoughVisionSymmPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+    class_name = "SymmOnPolicyRunner"
+    num_steps_per_env = 24
+    max_iterations = 20000
+    save_interval = 1000
+    experiment_name = "rough_vision_symm_direct"
+    empirical_normalization = False
+    policy = RslRlPpoActorCriticCfg(
+        class_name="ActorCriticSymm",
+        init_noise_std=1.0,
+        actor_hidden_dims=[128, 128, 128],
+        critic_hidden_dims=[128, 128, 128],
+        activation="elu",
+    )
+    algorithm = RslRlPpoAlgorithmCfg(
+        class_name="PPO", #PPO
+        value_loss_coef=1.0,
+        use_clipped_value_loss=True,
+        clip_param=0.2,
+        entropy_coef=0.005,
+        num_learning_epochs=5,
+        num_mini_batches=4,
+        learning_rate=1.0e-3,
+        schedule="adaptive",
+        gamma=0.99,
+        lam=0.95,
+        desired_kl=0.01,
+        max_grad_norm=1.0,
+    )
+
+    # Mixture of Expert Stuff
+    moe_cfg = moe_cfg.moe_cfg
+
+    # Morphosymm-rl Related Stuff
+    morphologycal_symmetries_cfg = morphosymm_cfg.vision_morphologycal_symmetries_cfg
+
+@configclass
 class RoughCDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     class_name = "DAEOnPolicyRunner"
     num_steps_per_env = 24
     max_iterations = 20000
-    save_interval = 50
+    save_interval = 1000
     experiment_name = "rough_cdae_direct"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
@@ -289,7 +326,7 @@ class RoughSymmECDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     class_name = "SymmDAEOnPolicyRunner"
     num_steps_per_env = 24
     max_iterations = 20000
-    save_interval = 50
+    save_interval = 1000
     experiment_name = "rough_symm_ecdae_direct"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
@@ -320,6 +357,46 @@ class RoughSymmECDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
     # Morphosymm-rl Related Stuff
     morphologycal_symmetries_cfg = morphosymm_cfg.dae_morphologycal_symmetries_cfg
+
+    # Koopman prediction stuff
+    koopman_cfg = koopman_model_cfg.ecdae_koopman_cfg
+
+@configclass
+class RoughVisionSymmECDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+    class_name = "SymmDAEOnPolicyRunner"
+    num_steps_per_env = 24
+    max_iterations = 20000
+    save_interval = 1000
+    experiment_name = "rough_vision_symm_ecdae_direct"
+    empirical_normalization = False
+    policy = RslRlPpoActorCriticCfg(
+        class_name="ActorCriticSymm", #ActorCritic, ActorCriticRecurrent, ActorCriticMoE, DAEActorCritic
+        init_noise_std=1.0,
+        actor_hidden_dims=[128, 128, 128],
+        critic_hidden_dims=[128, 128, 128],
+        activation="elu",
+    )
+    algorithm = RslRlPpoAlgorithmCfg(
+        class_name="PPOSymmDAEOnline", #PPO
+        value_loss_coef=1.0,
+        use_clipped_value_loss=True,
+        clip_param=0.2,
+        entropy_coef=0.005,
+        num_learning_epochs=5,
+        num_mini_batches=4,
+        learning_rate=1.0e-3,
+        schedule="adaptive",
+        gamma=0.99,
+        lam=0.95,
+        desired_kl=0.01,
+        max_grad_norm=1.0,
+    )
+
+    # Mixture of Expert Stuff
+    moe_cfg = moe_cfg.moe_cfg
+
+    # Morphosymm-rl Related Stuff
+    morphologycal_symmetries_cfg = morphosymm_cfg.vision_dae_morphologycal_symmetries_cfg
 
     # Koopman prediction stuff
     koopman_cfg = koopman_model_cfg.ecdae_koopman_cfg
