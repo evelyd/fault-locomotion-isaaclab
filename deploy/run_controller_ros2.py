@@ -36,10 +36,11 @@ if os.environ.get("FAULT_LOCOMOTION_ROS2_SOURCED") != "1":
 
 
 
-import rclpy 
-from rclpy.node import Node 
+import rclpy
+from rclpy.node import Node
 from sensor_msgs.msg import Joy
 from dls2_interface.msg import BaseState, BlindState, Imu, TrajectoryGenerator
+from visualization_msgs.msg import Marker, MarkerArray
 
 import time
 import numpy as np
@@ -54,6 +55,7 @@ import copy
 import mujoco
 from gym_quadruped.quadruped_env import QuadrupedEnv
 from gym_quadruped.utils.quadruped_utils import LegsAttr
+from gym_quadruped.sensors.heightmap import HeightMap
 
 
 # Locomotion Policy imports
@@ -90,20 +92,20 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
             base_vel_command_type="human",  # "forward", "random", "forward+rotate", "human"
         )
         self.env.reset(random=False)
-        
+
         self.last_render_time = time.time()
         if USE_MUJOCO_RENDER:
-            self.env.render()   
-                 
+            self.env.render()
+
 
         # Subscribers and Publishers
         self.subscription_base_state = self.create_subscription(BaseState,"/base_state", self.get_base_state_callback, 1)
         self.subscription_blind_state = self.create_subscription(BlindState,"blind_state", self.get_blind_state_callback, 1)
         self.subscription_imu = self.create_subscription(Imu,"/imu", self.get_imu_callback, 1)
-        
+
         self.subscription_joy = self.create_subscription(Joy,"/joy", self.get_joy_callback, 1)
         self.last_joy_time = None
-        
+
         self.publisher_trajectory_generator = self.create_publisher(TrajectoryGenerator,"/trajectory_generator", 1)
         RL_FREQ = 1./(config.training_env["sim"]["dt"]*config.training_env["decimation"])  # Hz, frequency of the RL controller
         self.timer = self.create_timer(1.0/RL_FREQ, self.compute_rl_control)
@@ -111,7 +113,7 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
 
         # Safety check to not do anything until a first base and blind state are received
         self.first_message_base_arrived = False
-        self.first_message_joints_arrived = False 
+        self.first_message_joints_arrived = False
         self.first_message_imu_arrived = False
 
         # Timing stuff
@@ -133,10 +135,29 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
         self.imu_angular_velocity = np.zeros(3)
         self.imu_orientation = np.zeros(4)
 
-        
+
         # Initialization of variables used in the main control loop --------------------------------
         self.locomotion_policy = LocomotionPolicyWrapper(env=self.env)
 
+        # On perceptive policies, use the ROS marker scan in place of MuJoCo ray casting.
+        self.heightmap = None
+        self._last_heightmap_warning_time = 0.0
+        self.first_message_heightmap_arrived = False
+
+        if self.locomotion_policy.use_vision:
+            pattern_cfg = config.training_env["height_scanner2"]["pattern_cfg"]
+            resolution_heightmap = pattern_cfg["resolution"]
+            num_rows_heightmap = round(pattern_cfg["size"][0] / resolution_heightmap) + 1
+            num_cols_heightmap = round(pattern_cfg["size"][1] / resolution_heightmap) + 1
+            self.heightmap = HeightMap(
+                num_rows=num_rows_heightmap,
+                num_cols=num_cols_heightmap,
+                dist_x=resolution_heightmap,
+                dist_y=resolution_heightmap,
+                mj_model=self.env.mjModel,
+                mj_data=self.env.mjData,
+            )
+            self.subscription_heightmap = self.create_subscription(MarkerArray, "/height_scan_markers", self.get_heightmap_callback, 1)
 
         self.stand_up_and_down_actions = LegsAttr(*[np.zeros((1, int(self.env.mjModel.nu/4))) for _ in range(4)])
         keyframe_id = mujoco.mj_name2id(self.env.mjModel, mujoco.mjtObj.mjOBJ_KEY, "down")
@@ -155,10 +176,10 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
         thread_console.daemon = True
         thread_console.start()
 
-    
+
     def get_joy_callback(self, msg):
         """
-        Callback function to handle joystick input. Joystick used is a 
+        Callback function to handle joystick input. Joystick used is a
         8Bitdi Ultimate 2C Wireless Controller.
         """
 
@@ -172,17 +193,17 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
 
         #kill the node if the button is pressed
         if msg.buttons[8] == 1:
-            self.get_logger().info("Joystick button pressed, shutting down the node.") 
+            self.get_logger().info("Joystick button pressed, shutting down the node.")
             # This will kill the robot hal
             os.system("kill -9 $(ps -u | grep -m 1 hal | grep -o \"^[^ ]* *[0-9]*\" | grep -o \"[0-9]*\")")
             # This will kill the process running this script
-            os.system("pkill -f play_ros2.py") 
+            os.system("pkill -f play_ros2.py")
             exit(0)
 
 
 
     def get_base_state_callback(self, msg):
-        
+
         self.position = np.array(msg.pose.position) #world frame
         # For the quaternion, the order is [w, x, y, z] on mujoco, and [x, y, z, w] on DLS2
         self.orientation = np.roll(np.array(msg.pose.orientation), 1) #world frame
@@ -194,20 +215,59 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
 
 
     def get_blind_state_callback(self, msg):
-        
+
         self.joint_positions = np.array(msg.joints_position)
         self.joint_velocities = np.array(msg.joints_velocity)
 
         self.first_message_joints_arrived = True
-     
-        
+
+
     def get_imu_callback(self, msg):
         # TODO check the frame
-        self.imu_linear_acceleration = np.array(msg.linear_acceleration) 
-        self.imu_angular_velocity = np.array(msg.angular_velocity) 
-        self.imu_orientation = np.array(msg.orientation) 
+        self.imu_linear_acceleration = np.array(msg.linear_acceleration)
+        self.imu_angular_velocity = np.array(msg.angular_velocity)
+        self.imu_orientation = np.array(msg.orientation)
 
         self.first_message_imu_arrived = True
+
+    def get_heightmap_callback(self, msg):
+        """Load a complete ``/height_scan_markers`` scan into ``self.heightmap``."""
+
+        try:
+            markers = sorted(
+                (
+                    marker
+                    for marker in msg.markers
+                    if marker.action == Marker.ADD and marker.type == Marker.SPHERE
+                ),
+                key=lambda marker: marker.id,
+            )
+            sample_count = self.heightmap.num_rows * self.heightmap.num_cols
+            points = np.array(
+                [
+                    [marker.pose.position.x, marker.pose.position.y, marker.pose.position.z]
+                    for marker in markers
+                ],
+                dtype=np.float64,
+            )
+            if not np.all(np.isfinite(points)):
+                raise ValueError("marker positions must be finite")
+
+            # Publisher order is Y-major/X-minor. HeightMap uses descending X/Y.
+            grid = points.reshape(self.heightmap.num_cols, self.heightmap.num_rows, 3)
+            grid = np.flip(grid.transpose(1, 0, 2), axis=(0, 1))
+            self.heightmap.sensor_data_matrix[:] = grid[:, :, None, :]
+        except ValueError as error:
+            # Keep the last complete scan and throttle malformed-scan warnings.
+            now = time.monotonic()
+            if now - self._last_heightmap_warning_time >= 2.0:
+                self.get_logger().warning(f"Ignoring height-map markers: {error}")
+                self._last_heightmap_warning_time = now
+            return
+
+        if not self.first_message_heightmap_arrived:
+            self.get_logger().info(f"Received the first complete height map ({sample_count} samples)")
+        self.first_message_heightmap_arrived = True
 
 
     def compute_rl_control(self):
@@ -217,7 +277,7 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
             self.loop_time = (start_time - self.last_start_time)
         self.last_start_time = start_time
         simulation_dt = self.loop_time
-        
+
 
         # Safety check to not do anything until a first base and blind state are received
         if(config.training_env["use_imu"] or config.training_env["use_concurrent_state_est"]):
@@ -226,7 +286,12 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
         else:
             if(self.first_message_base_arrived==False or self.first_message_joints_arrived==False):
                 return
-            
+
+        if self.locomotion_policy.use_vision:
+            # base_state is needed to transform markers from base_link to world coordinates.
+            if not self.first_message_base_arrived or not self.first_message_heightmap_arrived:
+                return
+
         # Update the mujoco model
         # Note that in case of IMU or concurrent state estimator, these info below are not used,
         # In the case we have a state estimator, this is usefull only for debugging visually
@@ -239,13 +304,13 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
         else:
             self.env.mjData.qpos[3:7] = copy.deepcopy(self.orientation)
             self.env.mjData.qvel[3:6] = copy.deepcopy(self.angular_velocity)
-        
+
         # These info instead are used for sure in all the cases
         self.env.mjData.qpos[7:] = copy.deepcopy(self.joint_positions)
         self.env.mjData.qvel[6:] = copy.deepcopy(self.joint_velocities)
         self.env.mjModel.opt.timestep = simulation_dt
-        mujoco.mj_forward(self.env.mjModel, self.env.mjData) 
-        
+        mujoco.mj_forward(self.env.mjModel, self.env.mjData)
+
         # Safety check for joystick timeout
         if(self.last_joy_time is not None and time.time() - self.last_joy_time > 1.0):
             self.env._ref_base_lin_vel_H[0] = 0.0
@@ -253,11 +318,11 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
             self.env._ref_base_ang_yaw_dot = 0.0
             print("Joystick timeout, stopping the robot")
             self.last_joy_time = None
-            
+
 
         env = self.env
         locomotion_policy = self.locomotion_policy
-        
+
         qpos, qvel = env.mjData.qpos, env.mjData.qvel
         base_lin_vel = env.base_lin_vel(frame='base')
         base_ang_vel = env.base_ang_vel(frame='base')
@@ -275,7 +340,7 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
 
         # variable saved for goDown and goUp motion
         self.joint_positions = np.concatenate([joints_pos.FL, joints_pos.FR, joints_pos.RL, joints_pos.RR], axis=0).flatten()
-    
+
         joints_vel = LegsAttr(*[np.zeros((1, int(env.mjModel.nu/4))) for _ in range(4)])
         joints_vel.FL = qvel[env.legs_qvel_idx.FL]
         joints_vel.FR = qvel[env.legs_qvel_idx.FR]
@@ -283,24 +348,51 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
         joints_vel.RR = qvel[env.legs_qvel_idx.RR]
         ref_base_lin_vel, ref_base_ang_vel = env.target_base_vel()
 
+        if locomotion_policy.use_vision:
+            rotation = np.empty(9, dtype=np.float64)
+            mujoco.mju_quat2Mat(rotation, base_quat_wxyz)
+            local_points = self.heightmap.sensor_data_matrix.reshape(-1, 3)
+            self.heightmap.data = (
+                local_points @ rotation.reshape(3, 3).T + base_pos
+            ).reshape(self.heightmap.sensor_data_matrix.shape)
 
         if(self.console.isRLActivated):
 
+            # --- SELECT FAILURE MODE ---
+            # 0: all fine, 1: rear failed, 3: FL failed, 5: FR failed, 7: RL failed, 9: RR failed
+            TEST_PHASE = 7
+
+            locomotion_policy._per_leg_joint_status = np.ones((4,3), dtype=np.float32)
+            if TEST_PHASE in (0, 2, 4, 6, 8):
+                pass
+            elif TEST_PHASE == 1:
+                locomotion_policy._per_leg_joint_status[2, :] = 0.0 # RL
+                locomotion_policy._per_leg_joint_status[3, :] = 0.0 # RR
+            elif TEST_PHASE == 3:
+                locomotion_policy._per_leg_joint_status[0, :] = 0.0 # FL
+            elif TEST_PHASE == 5:
+                locomotion_policy._per_leg_joint_status[1, :] = 0.0 # FR
+            elif TEST_PHASE == 7:
+                locomotion_policy._per_leg_joint_status[2, :] = 0.0 # RL
+            elif TEST_PHASE == 9:
+                locomotion_policy._per_leg_joint_status[3, :] = 0.0 # RR
+
             desired_joint_pos = locomotion_policy.compute_control(
-                        base_pos=base_pos, 
-                        base_ori_euler_xyz=base_ori_euler_xyz, 
+                        base_pos=base_pos,
+                        base_ori_euler_xyz=base_ori_euler_xyz,
                         base_quat_wxyz=base_quat_wxyz,
-                        base_lin_vel=base_lin_vel, 
+                        base_lin_vel=base_lin_vel,
                         base_ang_vel=base_ang_vel,
                         heading_orientation_SO3=heading_orientation_SO3,
-                        joints_pos=joints_pos, 
+                        joints_pos=joints_pos,
                         joints_vel=joints_vel,
-                        ref_base_lin_vel=ref_base_lin_vel, 
+                        ref_base_lin_vel=ref_base_lin_vel,
                         ref_base_ang_vel=ref_base_ang_vel,
                         imu_linear_acceleration=self.imu_linear_acceleration,
                         imu_angular_velocity=self.imu_angular_velocity,
-                        imu_orientation=self.imu_orientation)
-            
+                        imu_orientation=self.imu_orientation,
+                        heightmap_data=self.heightmap.data if self.locomotion_policy.use_vision else None)
+
             # Impedence Loop
             Kp = locomotion_policy.Kp_walking
             Kd = locomotion_policy.Kd_walking
@@ -329,28 +421,28 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
         if np.all(locomotion_policy._per_leg_joint_status[2, :] == 0.0) and np.all(locomotion_policy._per_leg_joint_status[3, :] == 0.0): #rear legs failure
             trajectory_generator_msg.kp[6:] = array('d', [0.0] * 6)
             trajectory_generator_msg.kd[6:] = array('d', [0.0] * 6)
-        
+
         elif np.all(locomotion_policy._per_leg_joint_status[0, :] == 0.0): #FL failure for thigh and calg
             trajectory_generator_msg.kp[0:3] = array('d', [0.0] * 3)
             trajectory_generator_msg.kd[0:3] = array('d', [0.0] * 3)
-        
+
         elif np.all(locomotion_policy._per_leg_joint_status[1] == 0.0): #FR failure for thigh and calg
             trajectory_generator_msg.kp[3:6] = array('d', [0.0] * 3)
             trajectory_generator_msg.kd[3:6] = array('d', [0.0] * 3)
-        
+
         elif np.all(locomotion_policy._per_leg_joint_status[2, :] == 0.0): #RL failure for thigh and calg
             trajectory_generator_msg.kp[6:9] = array('d', [0.0] * 3)
             trajectory_generator_msg.kd[6:9] = array('d', [0.0] * 3)
-        
+
         elif np.all(locomotion_policy._per_leg_joint_status[3, :] == 0.0): #RR failure for thigh and calg
             trajectory_generator_msg.kp[9:12] = array('d', [0.0] * 3)
             trajectory_generator_msg.kd[9:12] = array('d', [0.0] * 3)
 
 
         self.publisher_trajectory_generator.publish(trajectory_generator_msg)
-        
-        
-        
+
+
+
         # Render the simulation -----------------------------------------------------------------------------------
         if USE_MUJOCO_RENDER:
             RENDER_FREQ = 30
@@ -364,13 +456,13 @@ class Basic_Locomotion_DLS_Isaaclab_Node(Node):
 
 #---------------------------
 if __name__ == '__main__':
-    
+
     print('Hello from basic-locomotion-dls-isaaclab ros node.')
-    
+
     rclpy.init()
     basic_locomotion_dls_isaaclab_node = Basic_Locomotion_DLS_Isaaclab_Node()
     rclpy.spin(basic_locomotion_dls_isaaclab_node)
-    
+
     basic_locomotion_dls_isaaclab_node.destroy_node()
     rclpy.shutdown()
 
