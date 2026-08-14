@@ -56,7 +56,8 @@ import os
 import time
 import torch
 
-from rsl_rl.runners import DistillationRunner, OnPolicyRunner
+from rsl_rl.runners import DistillationRunner
+from morphosymm_rl.runners import OnPolicyRunner
 
 from isaaclab.envs import (
     DirectMARLEnv,
@@ -76,7 +77,7 @@ from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 #from rsl_rl.runners import on_policy_runner
-from morphosymm_rl.runners.symm_on_policy_runner import SymmOnPolicyRunner
+from morphosymm_rl.runners import SymmOnPolicyRunner, SymmDAEOnPolicyRunner
 # Import extensions to set up environment tasks
 import fault_locomotion_isaaclab.tasks  # noqa: F401
 
@@ -140,7 +141,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
-    runner = SymmOnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    if agent_cfg.class_name == "SymmOnPolicyRunner":
+        runner = SymmOnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
+    elif agent_cfg.class_name == "SymmDAEOnPolicyRunner":
+        runner = SymmDAEOnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
+    else:
+        raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
     runner.load(resume_path)
 
     # obtain the trained policy for inference

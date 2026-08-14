@@ -14,7 +14,7 @@ from isaaclab.sensors import ImuCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import GaussianNoiseCfg, NoiseModelWithAdditiveBiasCfg
 
-from fault_locomotion_isaaclab.assets.go2_asset import GO2_CFG 
+from fault_locomotion_isaaclab.assets.go2_asset import GO2_CFG
 from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
 
 import fault_locomotion_isaaclab.tasks.custom_events as custom_events
@@ -61,7 +61,7 @@ class EventCfg:
                 "operation": "scale"},
     )
 
-    
+
     base_external_force_torque = EventTerm(
         func=mdp.apply_external_force_torque,
         mode="reset",
@@ -71,13 +71,13 @@ class EventCfg:
             "torque_range": (-5.0, 5.0),
         },
     )
-    
-    
+
+
     randomize_joint_parameters = EventTerm(
         func=custom_events.randomize_joint_parameters,
         mode="reset",
         params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]), 
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
             "friction_distribution_params": (0.8, 1.2),
             "armature_distribution_params": (0.8, 1.2),
             "operation": "scale",
@@ -96,7 +96,7 @@ class EventCfg:
         "distribution": "uniform",
     },
     )
-    
+
     # interval
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity,
@@ -118,7 +118,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     action_space = 12
 
     observation_space = 3 # base linear velocity
-    observation_space += 3 # base angular velocity  
+    observation_space += 3 # base angular velocity
     observation_space += 3 # projected gravity in base frame
     observation_space += 3 # command (desired linear vel in x and y, desired yaw rate)
     observation_space += 12 # joint positions
@@ -144,29 +144,29 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     observation_space += 1 # expert activation
 
     use_imu = False
-    
+
     use_concurrent_state_est = True
     if(use_concurrent_state_est):
         concurrent_state_est_network_type = "tcn" # "mlp" or "tcn"
-        
+
         concurrent_state_est_output_space = 3 #lin_vel_b
-        
+
         single_concurrent_state_est_observation_space = 3 # base linear velocity
-        single_concurrent_state_est_observation_space += 3 # base angular velocity  
+        single_concurrent_state_est_observation_space += 3 # base angular velocity
         single_concurrent_state_est_observation_space += 3 # projected gravity in base frame
         single_concurrent_state_est_observation_space += 3 # command (desired linear vel in x and y, desired yaw rate)
         single_concurrent_state_est_observation_space += 12 # joint positions
         single_concurrent_state_est_observation_space += 12 # joint velocities
         single_concurrent_state_est_observation_space += 12 # last actions
-        concurrent_state_est_history_length = 5 
+        concurrent_state_est_history_length = 5
         concurrent_state_est_observation_space = single_concurrent_state_est_observation_space*concurrent_state_est_history_length
-        
+
         concurrent_state_est_batch_size = 512
         concurrent_state_est_train_epochs = 1000
         concurrent_state_est_lr = 1e-3
-        concurrent_state_est_ep_saving_interval = 1000
-        concurrent_state_est_ep_saving_start = 12000
-        concurrent_state_est_ep_saving_end = 16000
+        concurrent_state_est_ep_saving_interval = 500
+        concurrent_state_est_ep_saving_start = 1500
+        concurrent_state_est_ep_saving_end = 2500
 
 
     use_rma = False
@@ -177,13 +177,13 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
             rma_latent_space = 8
             rma_latent_encoder_hidden_features = 128
             rma_latent_encoder_seed = 0
-        
+
         rma_privileged_observation_space = 12 # joint status
 
         rma_output_space = rma_latent_space if rma_use_latent_space else rma_privileged_observation_space
 
         single_rma_observation_space = 3 # base linear velocity
-        single_rma_observation_space += 3 # base angular velocity  
+        single_rma_observation_space += 3 # base angular velocity
         single_rma_observation_space += 3 # projected gravity in base frame
         single_rma_observation_space += 3 # command (desired linear vel in x and y, desired yaw rate)
         single_rma_observation_space += 12 # joint positions
@@ -191,7 +191,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
         single_rma_observation_space += 12 # last actions
         rma_history_length = 5
         rma_observation_space = single_rma_observation_space*rma_history_length
-    
+
         rma_batch_size = 512
         rma_train_epochs = 1000
         rma_lr = 1e-3
@@ -257,10 +257,10 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
 
     # an imu sensor in case we don't want any state estimator (for now we can't use sites from the xml)
     imu = ImuCfg(
-        prim_path="/World/envs/env_.*/Robot/base", 
+        prim_path="/World/envs/env_.*/Robot/base",
         offset=ImuCfg.OffsetCfg(
             pos=(-0.02557, 0, 0.04232)
-        ), 
+        ),
         debug_vis=False)
 
 
@@ -327,8 +327,8 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     rl_all_failed = 1
     rr_all_failed = 0
     failure_type_activation = [
-                        all_fine, 
-                        rl_rr_all_failed, 
+                        all_fine,
+                        rl_rr_all_failed,
                         fl_thigh_calf_failed, fr_thigh_calf_failed, rl_thigh_calf_failed, rr_thigh_calf_failed,
                         fl_hip_failed, fr_hip_failed, rl_hip_failed, rr_hip_failed,
                         fl_thigh_failed, fr_thigh_failed, rl_thigh_failed, rr_thigh_failed,
@@ -339,7 +339,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
                         ]
 
     desired_joints_order = ['FL_hip_joint', 'FR_hip_joint', 'RL_hip_joint', 'RR_hip_joint',
-                           'FL_thigh_joint', 'FR_thigh_joint', 'RL_thigh_joint', 'RR_thigh_joint',  
+                           'FL_thigh_joint', 'FR_thigh_joint', 'RL_thigh_joint', 'RR_thigh_joint',
                            'FL_calf_joint', 'FR_calf_joint', 'RL_calf_joint', 'RR_calf_joint']
 
     # Desired clip actions
@@ -354,7 +354,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     ang_vel_reward_scale = -0.25
     orientation_reward_scale = -5.0
     height_reward_scale = 1.0
-    
+
     # Joint reward scale
     joints_torque_reward_scale = -2.5e-6
     joints_accel_reward_scale = -2.5e-7
@@ -378,7 +378,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     desired_phase_offset = [0.0, 0.5, 0.5, 0.0] #FL, FR, RL, RR
 
     stance_contact_suggestion_reward_scale = 0.5
-    
+
 
     # Feet reward scale
     feet_air_time_reward_scale = 1.5
@@ -388,14 +388,14 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
     feet_height_clearance_periodic_reward_scale = 0.0
 
     feet_slide_reward_scale = -0.25
-    
+
     feet_to_hip_distance_reward_scale = 1.5
     # This is used in locomotion_env.py for the above reward
     desired_hip_offset = 0.095
 
     com_support_polygon_reward_scale = 1.0
     com_support_polygon_margin = 0.03
-    
+
     feet_vertical_surface_contacts_reward_scale = -2.5
 
 
@@ -407,6 +407,9 @@ import isaaclab.terrains as terrain_gen
 from isaaclab.terrains.terrain_generator_cfg import TerrainGeneratorCfg
 @configclass
 class Go2RoughBlindEnvCfg(Go2FlatEnvCfg):
+
+    concurrent_state_est_ep_saving_start = 12000
+    concurrent_state_est_ep_saving_end = 16000
 
     ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
         curriculum=True,

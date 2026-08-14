@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import torch
+import os
 
 from isaaclab.assets import Articulation
 from isaaclab.managers import SceneEntityCfg
@@ -26,12 +27,12 @@ def _get_concurrent_state_estimation(self):
     )
     #the bottom element is the newest observation!!
     self._observation_history_concurrent_state_est = torch.cat((self._observation_history_concurrent_state_est[:,1:,:], obs_concurrent_state_est.unsqueeze(1)), dim=1)
-    obs_concurrent_state_est = torch.flatten(self._observation_history_concurrent_state_est, start_dim=1)     
+    obs_concurrent_state_est = torch.flatten(self._observation_history_concurrent_state_est, start_dim=1)
 
-    # Add noise to the observation - this is usually done in direct_rl.py in IsaacLab, but 
+    # Add noise to the observation - this is usually done in direct_rl.py in IsaacLab, but
     # the obs of concurrent SE does not pass from there - its prediciton yes instead!
-    if self.cfg.observation_noise_model:          
-        obs_concurrent_state_est = self._observation_noise_model_concurrent_state_est(obs_concurrent_state_est)   
+    if self.cfg.observation_noise_model:
+        obs_concurrent_state_est = self._observation_noise_model_concurrent_state_est(obs_concurrent_state_est)
 
     # Saving data
     output_concurrent_state_est = self._robot.data.root_lin_vel_b
@@ -41,23 +42,23 @@ def _get_concurrent_state_estimation(self):
     num_episode_from_start = self.common_step_counter / 24. #self.max_episode_length #HACK this should be taken from rsl rl
     num_final_episode_from_start = self.cfg.concurrent_state_est_ep_saving_end
     if num_episode_from_start > self.cfg.concurrent_state_est_ep_saving_start:
-        with torch.no_grad(): 
+        with torch.no_grad():
             prediction_concurrent_state_est = self._concurrent_state_est_network(obs_concurrent_state_est)
         linear_velocity_b = prediction_concurrent_state_est[:, :3]
     else:
         linear_velocity_b = self._robot.data.root_lin_vel_b
 
     # Train at some interval
-    if (num_episode_from_start % self.cfg.concurrent_state_est_ep_saving_interval == 0 and 
-        num_episode_from_start > self.cfg.concurrent_state_est_ep_saving_start - 1 and 
+    if (num_episode_from_start % self.cfg.concurrent_state_est_ep_saving_interval == 0 and
+        num_episode_from_start > self.cfg.concurrent_state_est_ep_saving_start - 1 and
             num_episode_from_start < num_final_episode_from_start - 500):  # Adjust the interval as needed
-        self._concurrent_state_est_network.train_network(batch_size=self.cfg.concurrent_state_est_batch_size, 
-                                                        epochs=self.cfg.concurrent_state_est_train_epochs, 
+        self._concurrent_state_est_network.train_network(batch_size=self.cfg.concurrent_state_est_batch_size,
+                                                        epochs=self.cfg.concurrent_state_est_train_epochs,
                                                         learning_rate=self.cfg.concurrent_state_est_lr, device=self.device)
         # Save the network
-        self._concurrent_state_est_network.save_network("concurrent_state_estimator.pth", self.device)    
+        self._concurrent_state_est_network.save_network(os.path.join(getattr(self, "log_dir", "."), "concurrent_state_est.pth"), self.device)
 
-    return linear_velocity_b  
+    return linear_velocity_b
 
 
 def _get_rma(self):
