@@ -40,6 +40,7 @@ from rclpy.node import Node
 from dls2_interface.msg import BaseState, BlindState, Imu, TrajectoryGenerator, FeetContactState
 from visualization_msgs.msg import Marker, MarkerArray
 from gym_quadruped.sensors.heightmap import HeightMap
+from gym_quadruped.utils.mujoco.visual import render_sphere
 
 import time
 import numpy as np
@@ -266,6 +267,16 @@ class Simulator_Node(Node):
             self.env.render()
             self.last_render_time = time.time()
 
+            if self.heightmap.data is not None:
+                for i in range(self.heightmap.data.shape[0]):
+                    for j in range(self.heightmap.data.data.shape[1]):
+                        self.heightmap.geom_ids[i, j] = render_sphere(
+                            viewer=self.env.viewer,
+                            position=([self.heightmap.data[i][j][0][0], self.heightmap.data[i][j][0][1], self.heightmap.data[i][j][0][2]]),
+                            diameter=0.02,
+                            color=[0, 1, 0, 0.5],
+                            geom_id=self.heightmap.geom_ids[i, j],
+                        )
 
 def main():
     print('Hello from the gym_quadruped simulator.')
