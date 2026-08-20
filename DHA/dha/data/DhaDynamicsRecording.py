@@ -62,6 +62,28 @@ class DhaDynamicsRecording(DynamicsRecording):
         return dict(action=action_traj[:, :-1])
 
     @staticmethod
+    def map_state_next_state(
+        sample: dict,
+        state_observations: List[str],
+        state_mean: Optional[np.ndarray] = None,
+        state_std: Optional[np.ndarray] = None,
+    ) -> dict:
+
+        batch_size = len(sample[f"{state_observations[0]}"])
+        time_horizon = len(sample[f"{state_observations[0]}"][0])
+        # Flatten observations a_t = [a_f, a_f+1, af+2, ..., a_f+F] s.t. a_t in R^{F * dim(a)}, a_f in R^{dim(a)}
+        state_obs = [sample[m] for m in state_observations]
+        # Define the state at time t and the states at time [t+1, t+pred_horizon]
+        if isinstance(state_obs[0], torch.Tensor):
+            state_tensors = [torch.as_tensor(x) for x in state_obs]
+            state_traj = torch.cat(state_tensors, dim=-1).reshape(batch_size, time_horizon, -1)
+        else:
+            state_traj = np.concatenate(state_obs, axis=-1).reshape(batch_size, time_horizon, -1)
+        if state_mean is not None and state_std is not None:
+            state_traj = (state_traj - state_mean) / state_std
+        return dict(state=state_traj[:, 0], next_state=state_traj[:, 1:])
+
+    @staticmethod
     def map_state_action_state(
         sample: dict,
         state_observations: List[str],
@@ -76,7 +98,7 @@ class DhaDynamicsRecording(DynamicsRecording):
         This function discards the 'next_action' component.
         """
 
-        state_temp_dict = DynamicsRecording.map_state_next_state(
+        state_temp_dict = DhaDynamicsRecording.map_state_next_state(
             sample,
             state_observations,
             state_mean=state_mean,
