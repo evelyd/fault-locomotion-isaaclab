@@ -79,6 +79,18 @@ class KoopmanCfg:
     state_dependent_obs_dyn: bool | None = MISSING
     """Whether to use state-dependent observation dynamics for the Koopman model."""
 
+    m: int | None = MISSING
+    """The number of random Fourier features for the Koopman model."""
+
+    sigma: float | None = MISSING
+    """The bandwidth parameter for the random Fourier features."""
+
+    kernel_type: str | None = MISSING
+    """The type of kernel to use for the random Fourier features (e.g., 'gaussian', 'laplace')."""
+
+    gamma: float | None = MISSING
+    """The regularization factor for the Koopman eDMDc."""
+
 
 activation = 'ELU'
 num_layers = 5
@@ -124,6 +136,39 @@ cdae_koopman_cfg = KoopmanCfg(
         replay_buffer_size = replay_buffer_size
     )
 
+m = 180
+sigma = 1.0
+kernel_type = 'gaussian'
+gamma = 1.0
+
+rff_koopman_cfg = KoopmanCfg(
+        model_name = "rff_koopman",
+        equivariant = False,
+        activation = activation,
+        num_layers = num_layers,
+        num_hidden_units = num_hidden_units,
+        batch_norm = batch_norm,
+        obs_pred_w = obs_pred_w,
+        orth_w = orth_w,
+        corr_w = corr_w,
+        bias = bias,
+        constant_function = constant_function,
+        num_mini_batches = num_mini_batches,
+        mini_batch_size = mini_batch_size,
+        beta_initial = beta_initial,
+        beta_annealing_steps = beta_annealing_steps,
+        lr = lr,
+        max_epochs = max_epochs,
+        obs_state_ratio = obs_state_ratio,
+        pred_horizon = pred_horizon,
+        frames_per_state = frames_per_state,
+        replay_buffer_size = replay_buffer_size,
+        m = m,
+        sigma = sigma,
+        kernel_type = kernel_type,
+        gamma = gamma
+    )
+
 group_avg_trick = True
 state_dependent_obs_dyn = False
 
@@ -151,4 +196,34 @@ ecdae_koopman_cfg = KoopmanCfg(
         replay_buffer_size = replay_buffer_size,
         group_avg_trick = group_avg_trick,
         state_dependent_obs_dyn = state_dependent_obs_dyn
+    )
+
+erff_koopman_cfg = KoopmanCfg(
+        model_name = "erff_koopman",
+        equivariant = True,
+        activation = activation,
+        num_layers = num_layers,
+        num_hidden_units = num_hidden_units,
+        batch_norm = batch_norm,
+        obs_pred_w = obs_pred_w,
+        orth_w = orth_w,
+        corr_w = corr_w,
+        bias = bias,
+        constant_function = constant_function,
+        num_mini_batches = num_mini_batches,
+        mini_batch_size = mini_batch_size,
+        beta_initial = beta_initial,
+        beta_annealing_steps = beta_annealing_steps,
+        lr = lr,
+        max_epochs = max_epochs,
+        obs_state_ratio = obs_state_ratio,
+        pred_horizon = pred_horizon,
+        frames_per_state = frames_per_state,
+        replay_buffer_size = replay_buffer_size,
+        group_avg_trick = group_avg_trick,
+        state_dependent_obs_dyn = state_dependent_obs_dyn,
+        m = m,
+        sigma = sigma,
+        kernel_type = kernel_type,
+        gamma = gamma
     )
