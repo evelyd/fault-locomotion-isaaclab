@@ -1,18 +1,30 @@
 ## Installation Deploy using Conda
 
-1. install [miniforge](https://github.com/conda-forge/miniforge/releases) (x86_64 or arm64 depending on your platform)
+1. install [miniforge](https://github.com/conda-forge/miniforge/releases) (x86_64 or arm64 depending on your platform) or [pixi](https://pixi.prefix.dev/latest/installation/) - the latter for full reproducibility.
 
 2. create an environment using the file in the folder [deploy/installation](./deploy/installation):
 
 
 ```bash
-conda env create -f mamba_environment.yaml
+conda env create -f deploy/installation/mamba_environment_humble.yaml
 conda activate fault_locomotion_isaaclab_env
+
+conda env create -f deploy/installation/mamba_environment_lyrical.yaml
+conda activate fault_locomotion_isaaclab_env
+
+pixi install --manifest-path deploy/installation/pixi.toml -e humble
+pixi shell --manifest-path deploy/installation/pixi.toml -e humble
+
+pixi install --manifest-path deploy/installation/pixi.toml -e lyrical
+pixi shell --manifest-path deploy/installation/pixi.toml -e lyrical
+
 ```
 
+3. suggestion - add in your .bashrc some alias to run the activate/shell commands. You will run them multiple time!
 
 ## Run Sim-to-Sim 
 
+Choose in deploy/config.py the robot/policy you want to run. **Activate your environment conda/pixi**. Then:
 
 ```bash
 ## Sim-to-Sim
@@ -30,6 +42,8 @@ ros2 launch teleop_twist_joy teleop-launch.py joy_config:='xbox' (if want joysti
 ```
 
 ## Run Sim-to-Real
+Choose in deploy/config.py the robot/policy you want to run. **Activate your environment conda/pixi**. This script matches well with the repo [unitree-ros2-dls](https://github.com/iit-DLSLab/unitree_ros2_dls/tree/main) that you can use to control Unitree robots. **If you use it, remember to source first unitree_ros2_connect.bash in every terminal.**
+
 
 ```bash
 ## Sim-to-Real with ROS2 (TERMINAL 1)
