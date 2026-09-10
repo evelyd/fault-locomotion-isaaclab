@@ -85,7 +85,7 @@ import escnn
 from escnn.nn import FieldType
 
 # Assuming configure_observation_space_representations is available in your imports
-from morphosymm_rl.symm_utils import configure_observation_space_representations
+from morphosymm_rsl_rl.symm_utils import configure_observation_space_representations
 
 def initialize_dae_model(morphologycal_symmetries_cfg, koopman_cfg, task: str, state_dim: int, action_dim: int, dt: float, device: torch.device, G = None) -> torch.nn.Module:
     """

@@ -1,4 +1,4 @@
-from isaaclab.utils import configclass
+from isaaclab.utils.configclass import configclass
 
 from pathlib import Path
 from dataclasses import MISSING
@@ -139,7 +139,7 @@ cdae_koopman_cfg = KoopmanCfg(
 m = 180
 sigma = 1.0
 kernel_type = 'gaussian'
-gamma = 1.0
+gamma = 1.0e2
 
 rff_koopman_cfg = KoopmanCfg(
         model_name = "rff_koopman",

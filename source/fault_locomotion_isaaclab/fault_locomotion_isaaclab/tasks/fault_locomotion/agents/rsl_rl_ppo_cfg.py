@@ -62,13 +62,19 @@ class FlatSymmPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 2500
     save_interval = 100
     experiment_name = "flat_symm_direct"
-    empirical_normalization = False
-    policy = RslRlPpoActorCriticCfg(
-        class_name="ActorCriticSymm",
-        init_noise_std=1.0,
-        actor_hidden_dims=[128, 128, 128],
-        critic_hidden_dims=[128, 128, 128],
+
+    actor = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
+    )
+    critic = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         class_name="PPO", #PPO
@@ -99,13 +105,17 @@ class FlatCDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 2500
     save_interval = 100
     experiment_name = "flat_cdae_direct"
-    empirical_normalization = False
-    policy = RslRlPpoActorCriticCfg(
-        class_name="DAEActorCritic",
-        init_noise_std=1.0,
-        actor_hidden_dims=[128, 128, 128],
-        critic_hidden_dims=[128, 128, 128],
+    actor = RslRlMLPModelCfg(
+        hidden_dims=[128, 128, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
+    )
+    critic = RslRlMLPModelCfg(
+        class_name="DAEModel",
+        hidden_dims=[128, 128, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         class_name="PPODAEOnline", #PPO
@@ -139,13 +149,17 @@ class FlatRFFKoopmanPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 2500
     save_interval = 100
     experiment_name = "flat_rff_koopman_direct"
-    empirical_normalization = False
-    policy = RslRlPpoActorCriticCfg(
-        class_name="DAEActorCritic",
-        init_noise_std=1.0,
-        actor_hidden_dims=[128, 128, 128],
-        critic_hidden_dims=[128, 128, 128],
+    actor = RslRlMLPModelCfg(
+        hidden_dims=[128, 128, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
+    )
+    critic = RslRlMLPModelCfg(
+        class_name="DAEModel",
+        hidden_dims=[128, 128, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         class_name="PPORFF", #PPO
@@ -179,13 +193,18 @@ class FlatSymmECDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 2500
     save_interval = 100
     experiment_name = "flat_symm_ecdae_direct"
-    empirical_normalization = False
-    policy = RslRlPpoActorCriticCfg(
-        class_name="ActorCriticSymm",
-        init_noise_std=1.0,
-        actor_hidden_dims=[128, 128, 128],
-        critic_hidden_dims=[128, 128, 128],
+    actor = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
+    )
+    critic = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         class_name="PPOSymmDAEOnline", #PPO
@@ -219,13 +238,18 @@ class FlatSymmERFFKoopmanPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 2500
     save_interval = 100
     experiment_name = "flat_symm_erff_koopman_direct"
-    empirical_normalization = False
-    policy = RslRlPpoActorCriticCfg(
-        class_name="ActorCriticSymm",
-        init_noise_std=1.0,
-        actor_hidden_dims=[128, 128, 128],
-        critic_hidden_dims=[128, 128, 128],
+    actor = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
+    )
+    critic = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         class_name="PPOSymmERFF", #PPO
@@ -301,13 +325,18 @@ class RoughSymmPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 20000
     save_interval = 1000
     experiment_name = "rough_symm_direct"
-    empirical_normalization = False
-    policy = RslRlPpoActorCriticCfg(
-        class_name="ActorCriticSymm",
-        init_noise_std=1.0,
-        actor_hidden_dims=[128, 128, 128],
-        critic_hidden_dims=[128, 128, 128],
+    actor = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
+    )
+    critic = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         class_name="PPO", #PPO
@@ -338,13 +367,18 @@ class RoughVisionSymmPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 20000
     save_interval = 1000
     experiment_name = "rough_vision_symm_direct"
-    empirical_normalization = False
-    policy = RslRlPpoActorCriticCfg(
-        class_name="ActorCriticSymm",
-        init_noise_std=1.0,
-        actor_hidden_dims=[128, 128, 128],
-        critic_hidden_dims=[128, 128, 128],
+    actor = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
+    )
+    critic = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         class_name="PPO", #PPO
@@ -375,13 +409,17 @@ class RoughCDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 20000
     save_interval = 1000
     experiment_name = "rough_cdae_direct"
-    empirical_normalization = False
-    policy = RslRlPpoActorCriticCfg(
-        class_name="DAEActorCritic", #ActorCritic, ActorCriticRecurrent, ActorCriticMoE, DAEActorCritic
-        init_noise_std=1.0,
-        actor_hidden_dims=[128, 128, 128],
-        critic_hidden_dims=[128, 128, 128],
+    actor = RslRlMLPModelCfg(
+        hidden_dims=[128, 128, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
+    )
+    critic = RslRlMLPModelCfg(
+        class_name="DAEModel",
+        hidden_dims=[128, 128, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         class_name="PPODAEOnline", #PPO
@@ -416,12 +454,17 @@ class RoughRFFKoopmanPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     save_interval = 1000
     experiment_name = "rough_rff_koopman_direct"
     empirical_normalization = False
-    policy = RslRlPpoActorCriticCfg(
-        class_name="DAEActorCritic", #ActorCritic, ActorCriticRecurrent, ActorCriticMoE, DAEActorCritic
-        init_noise_std=1.0,
-        actor_hidden_dims=[128, 128, 128],
-        critic_hidden_dims=[128, 128, 128],
+    actor = RslRlMLPModelCfg(
+        hidden_dims=[128, 128, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
+    )
+    critic = RslRlMLPModelCfg(
+        class_name="DAEModel",
+        hidden_dims=[128, 128, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         class_name="PPORFF", #PPO
@@ -455,13 +498,18 @@ class RoughSymmECDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 20000
     save_interval = 1000
     experiment_name = "rough_symm_ecdae_direct"
-    empirical_normalization = False
-    policy = RslRlPpoActorCriticCfg(
-        class_name="ActorCriticSymm", #ActorCritic, ActorCriticRecurrent, ActorCriticMoE, DAEActorCritic
-        init_noise_std=1.0,
-        actor_hidden_dims=[128, 128, 128],
-        critic_hidden_dims=[128, 128, 128],
+    actor = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
+    )
+    critic = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         class_name="PPOSymmDAEOnline", #PPO
@@ -495,13 +543,18 @@ class RoughVisionSymmECDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 20000
     save_interval = 1000
     experiment_name = "rough_vision_symm_ecdae_direct"
-    empirical_normalization = False
-    policy = RslRlPpoActorCriticCfg(
-        class_name="ActorCriticSymm", #ActorCritic, ActorCriticRecurrent, ActorCriticMoE, DAEActorCritic
-        init_noise_std=1.0,
-        actor_hidden_dims=[128, 128, 128],
-        critic_hidden_dims=[128, 128, 128],
+    actor = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
+    )
+    critic = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         class_name="PPOSymmDAEOnline", #PPO
@@ -535,13 +588,18 @@ class RoughVisionSymmERFFKoopmanPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 20000
     save_interval = 1000
     experiment_name = "rough_vision_symm_erff_koopman_direct"
-    empirical_normalization = False
-    policy = RslRlPpoActorCriticCfg(
-        class_name="ActorCriticSymm", #ActorCritic, ActorCriticRecurrent, ActorCriticMoE, DAEActorCritic
-        init_noise_std=1.0,
-        actor_hidden_dims=[128, 128, 128],
-        critic_hidden_dims=[128, 128, 128],
+    actor = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
         activation="elu",
+        obs_normalization=False,
+        distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
+    )
+    critic = RslRlMLPModelCfg(
+        class_name="SymmModel",
+        hidden_dims=[128, 128, 128],
+        activation="elu",
+        obs_normalization=False,
     )
     algorithm = RslRlPpoAlgorithmCfg(
         class_name="PPOSymmERFF", #PPO

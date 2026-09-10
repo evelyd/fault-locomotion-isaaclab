@@ -84,7 +84,7 @@ import torch
 from datetime import datetime
 
 from rsl_rl.runners import DistillationRunner
-from morphosymm_rl.runners import OnPolicyRunner, DAEOnPolicyRunner
+from morphosymm_rsl_rl.runners import OnPolicyRunner, DAEOnPolicyRunner
 
 from isaaclab.envs import (
     DirectMARLEnv,
@@ -113,6 +113,21 @@ torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
+
+# Monkey patch to fix wandb.Settings pydantic v2 compatibility issue
+# The start_method parameter is not supported in newer wandb/pydantic versions
+try:
+    import wandb
+    original_settings_init = wandb.Settings.__init__
+
+    def patched_settings_init(self, *args, **kwargs):
+        # Remove start_method if it exists, as it's not supported in pydantic v2
+        kwargs.pop("start_method", None)
+        original_settings_init(self, *args, **kwargs)
+
+    wandb.Settings.__init__ = patched_settings_init
+except ImportError:
+    pass  # wandb not installed
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)

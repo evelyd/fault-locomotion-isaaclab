@@ -98,13 +98,22 @@ heightmap_name = "heightmap:13x13"
 vision_obs_space_names_actor += [heightmap_name]
 vision_obs_space_names_actor += ["invariant_scalar"]
 vision_obs_space_names_critic = single_state_names * int(history_length)
+
 vision_obs_space_names_critic += [
         "clock_data", "clock_data", "clock_data",  # P gains
         "clock_data", "clock_data", "clock_data",  # D gains
 ]
-vision_obs_space_names_critic += ["invariant_scalar", "invariant_scalar", "clock_data", "clock_data", "clock_data"]
-vision_obs_space_names_critic += [heightmap_name]
-vision_obs_space_names_critic += ["invariant_scalar"]
+vision_obs_space_names_critic += [
+        "base_lin_vel",  # clean lin vel b
+        "invariant_scalar", "invariant_scalar",  # height error, terrain pitch
+        "clock_data",  # contacts foot
+        "clock_data",  # feet air time
+        "clock_data",  # feet contact time
+        "clock_data",  # foot error
+]
+vision_obs_space_names_critic += ["heightmap:4x4"] # Pose height scanner (privileged)
+vision_obs_space_names_critic += [heightmap_name]  # Perceptive scanner (vision)
+vision_obs_space_names_critic += ["invariant_scalar"] # Expert activation
 
 vision_morphologycal_symmetries_cfg = MorphologycalSymmetriesCfg(
         obs_space_names_actor = vision_obs_space_names_actor,
