@@ -118,6 +118,7 @@ vision_obs_space_names_critic += ["invariant_scalar"] # Expert activation
 vision_morphologycal_symmetries_cfg = MorphologycalSymmetriesCfg(
         obs_space_names_actor = vision_obs_space_names_actor,
         obs_space_names_critic = vision_obs_space_names_critic,
+        obs_space_names_single_state = single_state_names,
         action_space_names = action_space_names,
         joints_order = joints_order,
         robot_name = robot_name,
