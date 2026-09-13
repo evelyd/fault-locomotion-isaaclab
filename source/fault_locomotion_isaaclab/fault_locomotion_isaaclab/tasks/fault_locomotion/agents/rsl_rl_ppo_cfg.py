@@ -492,6 +492,10 @@ class RoughRFFKoopmanPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     koopman_cfg = koopman_model_cfg.rff_koopman_cfg
 
 @configclass
+class RoughRFFPPORunnerCfg(RoughRFFKoopmanPPORunnerCfg):
+    experiment_name = "rough_rff_direct"
+
+@configclass
 class RoughSymmECDAEPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     class_name = "SymmDAEOnPolicyRunner"
     num_steps_per_env = 24
@@ -625,3 +629,11 @@ class RoughVisionSymmERFFKoopmanPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
     # Koopman prediction stuff
     koopman_cfg = koopman_model_cfg.erff_koopman_cfg
+
+@configclass
+class RoughVisionSymmERFFPPORunnerCfg(RoughVisionSymmERFFKoopmanPPORunnerCfg):
+    class_name = "SymmDAEOnPolicyRunner"
+    num_steps_per_env = 24
+    max_iterations = 20000
+    save_interval = 1000
+    experiment_name = "rough_vision_symm_erff_direct"
