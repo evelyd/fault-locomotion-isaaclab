@@ -50,6 +50,66 @@ gym.register(
     },
 )
 
+gym.register(
+    id="FaultLocomotion-Go2-Rough-Vision-PPOeqic",
+    entry_point=FaultLocomotionEnv,
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Go2RoughVisionEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughPPOSymmRunnerCfg",
+    },
+)
+
+gym.register(
+    id="FaultLocomotion-Go2-Rough-Vision-SKooP",
+    entry_point=FaultLocomotionEnv,
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Go2RoughVisionEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughPPOSymmDAERunnerCfg",
+    },
+)
+
+gym.register(
+    id="FaultLocomotion-Go2-Rough-Vision-RFF",
+    entry_point=FaultLocomotionEnv,
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Go2RoughVisionEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughPPORFFRunnerCfg",
+    },
+)
+
+gym.register(
+    id="FaultLocomotion-Go2-Rough-Vision-RFFKoop",
+    entry_point=FaultLocomotionEnv,
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Go2RoughVisionEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughPPORFFKoopmanRunnerCfg",
+    },
+)
+
+gym.register(
+    id="FaultLocomotion-Go2-Rough-Vision-ERFF",
+    entry_point=FaultLocomotionEnv,
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Go2RoughVisionEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughPPOSymmRFFRunnerCfg",
+    },
+)
+
+gym.register(
+    id="FaultLocomotion-Go2-Rough-Vision-ERFFKoop",
+    entry_point=FaultLocomotionEnv,
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": Go2RoughVisionEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:RoughPPOSymmRFFKoopmanRunnerCfg",
+    },
+)
+
 
 # Pegasus environments
 from .fault_locomotion_env import PegasusFlatEnvCfg, PegasusRoughVisionEnvCfg, PegasusRoughBlindEnvCfg
@@ -62,7 +122,7 @@ gym.register(
         "env_cfg_entry_point": PegasusFlatEnvCfg,
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:FlatPPORunnerCfg",
     },
-)  
+)
 
 gym.register(
     id="FaultLocomotion-Pegasus-Rough-Blind",

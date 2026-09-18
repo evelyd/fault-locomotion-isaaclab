@@ -115,8 +115,24 @@ torch.backends.cudnn.allow_tf32 = True
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
+# Monkey patch to fix wandb.Settings pydantic v2 compatibility issue
+# The start_method parameter is not supported in newer wandb/pydantic versions
+try:
+    import wandb
+    original_settings_init = wandb.Settings.__init__
+
+    def patched_settings_init(self, *args, **kwargs):
+        # Remove start_method if it exists, as it's not supported in pydantic v2
+        kwargs.pop("start_method", None)
+        original_settings_init(self, *args, **kwargs)
+
+    wandb.Settings.__init__ = patched_settings_init
+except ImportError:
+    pass  # wandb not installed
+
 # from rsl_rl.runners import OnPolicyRunner
-from morphosymm_rl.runners.symm_on_policy_runner import SymmOnPolicyRunner
+from morphosymm_rsl_rl.runners.symm_on_policy_runner import SymmOnPolicyRunner
+from morphosymm_rsl_rl.runners.symm_dae_on_policy_runner import SymmDAEOnPolicyRunner
 import escnn.nn
 
 
@@ -203,8 +219,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
 
     # create runner from rsl-rl
-    runner = SymmOnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
-    
+    if agent_cfg.class_name == "SymmOnPolicyRunner":
+        runner = SymmOnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
+    elif agent_cfg.class_name == "SymmDAEOnPolicyRunner":
+        runner = SymmDAEOnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
+    else:
+        raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
+
     # write git state to logs
     runner.add_git_repo_to_log(__file__)
     # load the checkpoint

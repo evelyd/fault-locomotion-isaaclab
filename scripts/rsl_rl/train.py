@@ -83,6 +83,7 @@ import torch
 from datetime import datetime
 
 from rsl_rl.runners import DistillationRunner, OnPolicyRunner
+from morphosymm_rsl_rl.runners import DAEOnPolicyRunner
 
 from isaaclab.envs import (
     DirectMARLEnv,
@@ -111,6 +112,22 @@ torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
+
+
+# Monkey patch to fix wandb.Settings pydantic v2 compatibility issue
+# The start_method parameter is not supported in newer wandb/pydantic versions
+try:
+    import wandb
+    original_settings_init = wandb.Settings.__init__
+
+    def patched_settings_init(self, *args, **kwargs):
+        # Remove start_method if it exists, as it's not supported in pydantic v2
+        kwargs.pop("start_method", None)
+        original_settings_init(self, *args, **kwargs)
+
+    wandb.Settings.__init__ = patched_settings_init
+except ImportError:
+    pass  # wandb not installed
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -203,6 +220,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
     elif agent_cfg.class_name == "DistillationRunner":
         runner = DistillationRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
+    elif agent_cfg.class_name == "DAEOnPolicyRunner":
+        runner = DAEOnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
     else:
         raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
     # write git state to logs

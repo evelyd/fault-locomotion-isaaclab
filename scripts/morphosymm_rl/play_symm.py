@@ -76,7 +76,8 @@ from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 #from rsl_rl.runners import on_policy_runner
-from morphosymm_rl.runners.symm_on_policy_runner import SymmOnPolicyRunner
+from morphosymm_rsl_rl.runners import SymmOnPolicyRunner, SymmDAEOnPolicyRunner
+
 # Import extensions to set up environment tasks
 import fault_locomotion_isaaclab.tasks  # noqa: F401
 
@@ -140,7 +141,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
-    runner = SymmOnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    if agent_cfg.class_name == "SymmOnPolicyRunner":
+        runner = SymmOnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    elif agent_cfg.class_name == "SymmDAEOnPolicyRunner":
+        runner = SymmDAEOnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    else:
+        raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
     runner.load(resume_path)
 
     # obtain the trained policy for inference
@@ -152,8 +158,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         # version 2.3 onwards
         policy_nn = runner.alg.policy
     except AttributeError:
-        # version 2.2 and below
-        policy_nn = runner.alg.actor_critic
+        try:
+            # version 2.2 and below
+            policy_nn = runner.alg.actor_critic
+        except AttributeError:
+            # rsl-rl >= 5.0: actor model
+            policy_nn = runner.alg.actor
 
     # extract the normalizer
     if hasattr(policy_nn, "actor_obs_normalizer"):
@@ -169,8 +179,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # adapter module used specifically for deployment export.
     policy_for_export = policy_nn.export_for_isaaclab() if hasattr(policy_nn, "export_for_isaaclab") else policy_nn
     export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-    export_policy_as_jit(policy_for_export, normalizer=normalizer, path=export_model_dir, filename="policy.pt")
-    export_policy_as_onnx(policy_for_export, normalizer=normalizer, path=export_model_dir, filename="policy.onnx")
+    try:
+        runner.export_policy_to_jit(path=export_model_dir, filename="policy.pt")
+        runner.export_policy_to_onnx(path=export_model_dir, filename="policy.onnx")
+    except Exception as e:  # export is optional for filming
+        print(f"[WARN] policy export skipped: {e}")
 
 
 
