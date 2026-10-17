@@ -32,9 +32,8 @@ class MorphologycalSymmetriesCfg:
     obs_space_names_single_state: list[str] | None = MISSING
     """The observation space names for the single state representation. This is used for DAE latent augmentation. If None, then no single state representation will be used."""
 
-
-# --- Extract single state names for DAE reuse ---
-single_state_names = [
+# Define the full 60-dim base state for the environment output
+base_state_names = [
     "base_lin_vel",
     "base_ang_vel",
     "gravity",
@@ -46,14 +45,27 @@ single_state_names = [
     "clock_data", "clock_data", "clock_data",  # hip/thigh/calf statuses
 ]
 
+# --- Extract single state names for DAE reuse ---
+single_state_names = [
+    "base_lin_vel",
+    "base_ang_vel",
+    "gravity",
+    "des_base_lin_vel_xy",
+    "des_base_ang_vel_yaw",
+    "joints_pos",
+    "joints_vel",
+    "joints_pos",
+    # "clock_data", "clock_data", "clock_data",  # hip/thigh/calf statuses
+]
+
 # Actor OBS
 history_length = 5
-obs_space_names_actor = single_state_names * int(history_length)
+obs_space_names_actor = base_state_names * int(history_length)
 obs_space_names_actor += ["invariant_scalar"]
 
 
 # Critic OBS
-obs_space_names_critic = single_state_names * int(history_length)
+obs_space_names_critic = base_state_names * int(history_length)
 obs_space_names_critic += ["invariant_scalar"]
 obs_space_names_critic += [
         "clock_data", "clock_data", "clock_data",  # P gains

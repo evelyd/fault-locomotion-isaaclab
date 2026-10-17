@@ -136,7 +136,7 @@ cdae_koopman_cfg = KoopmanCfg(
         replay_buffer_size = replay_buffer_size
     )
 
-m = 180
+m = 48 * 3
 sigma = 1.0
 kernel_type = 'gaussian'
 gamma = 1.0e2
