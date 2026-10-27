@@ -556,11 +556,19 @@ class Go2RoughVisionEnvCfg(Go2RoughBlindEnvCfg):
 
 
     # we add a height scanner for perceptive locomotion
+    # perceptive_height_scanner = RayCasterCfg(
+    #     prim_path="/World/envs/env_.*/Robot/base",
+    #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.0)),
+    #     ray_alignment='yaw',
+    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.2, 1.2]),
+    #     debug_vis=False,
+    #     mesh_prim_paths=["/World/ground"],
+    # )
     perceptive_height_scanner = RayCasterCfg(
         prim_path="/World/envs/env_.*/Robot/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.0)),
+        offset=RayCasterCfg.OffsetCfg(pos=(0.4, 0.0, 2.0)),
         ray_alignment='yaw',
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.2, 1.2]),
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[0.6, 0.8]),
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
     )
