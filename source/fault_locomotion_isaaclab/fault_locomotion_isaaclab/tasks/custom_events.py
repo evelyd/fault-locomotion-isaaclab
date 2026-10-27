@@ -607,8 +607,10 @@ def _sample_random_commands(self, env_ids: torch.Tensor | None = None) -> torch.
     num_commands = self.num_envs if env_ids is None else env_ids.shape[0]
     commands = torch.empty(num_commands, self._commands.shape[1], device=self.device, dtype=self._commands.dtype)
     commands.uniform_(-1.0, 1.0)
-    commands[:, 0] *= 0.3
-    commands[:, 1] *= 0.25
+    # commands[:, 0] *= 0.3
+    commands[:, 0] = torch.abs(commands[:, 0]) * 0.3 # disable backward
+    # commands[:, 1] *= 0.25
+    commands[:, 1] = 0.0 # Disable lateral
     commands[:, 2] *= 0.3
     return commands
 

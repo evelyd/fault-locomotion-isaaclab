@@ -94,8 +94,10 @@ morphologycal_symmetries_cfg = MorphologycalSymmetriesCfg(
         robot_name = robot_name,
     )
 
-vision_obs_space_names_actor = obs_space_names_actor + ["heightmap:13x13"]
-vision_obs_space_names_critic = obs_space_names_critic + ["heightmap:13x13"]
+# vision_obs_space_names_actor = obs_space_names_actor + ["heightmap:13x13"]
+# vision_obs_space_names_critic = obs_space_names_critic + ["heightmap:13x13"]
+vision_obs_space_names_actor = obs_space_names_actor + ["heightmap:7x9"]
+vision_obs_space_names_critic = obs_space_names_critic + ["heightmap:7x9"]
 
 vision_morphologycal_symmetries_cfg = MorphologycalSymmetriesCfg(
         obs_space_names_actor = vision_obs_space_names_actor,
