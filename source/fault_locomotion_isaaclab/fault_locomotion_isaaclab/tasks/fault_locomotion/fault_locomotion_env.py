@@ -28,9 +28,9 @@ from isaaclab.utils.noise import NoiseModel
 from isaaclab import cloner
 
 try:
-    from .. import custom_rewards, custom_events, custom_observations
+    from .. import custom_rewards, custom_events, custom_observations, custom_visualizations
 except Exception:
-    from fault_locomotion_isaaclab.tasks import custom_rewards, custom_events, custom_observations
+    from fault_locomotion_isaaclab.tasks import custom_rewards, custom_events, custom_observations, custom_visualizations
 
 
 from .go2_env_cfg import Go2FlatEnvCfg, Go2RoughVisionEnvCfg, Go2RoughBlindEnvCfg
@@ -41,6 +41,7 @@ from fault_locomotion_isaaclab.tasks.supervised_learning_networks import FrozenR
 class FaultLocomotionEnv(DirectRLEnv):
 
     def __init__(self, cfg, render_mode: str | None = None, **kwargs):
+        self._height_map_visualizer = None
         super().__init__(cfg, render_mode, **kwargs)
 
         # Joint position command (deviation from default joint positions)
@@ -58,7 +59,7 @@ class FaultLocomotionEnv(DirectRLEnv):
         # Swing peak
         self._swing_peak = torch.tensor([0.0, 0.0, 0.0, 0.0], device=self.device).repeat(self.num_envs,1)
         self._swing_peak_periodic = torch.tensor([0.0, 0.0, 0.0, 0.0], device=self.device).repeat(self.num_envs,1)
-        
+
         # Desired Hip Offset
         self._desired_hip_offset = torch.tensor([-self.cfg.desired_hip_offset, self.cfg.desired_hip_offset, -self.cfg.desired_hip_offset, self.cfg.desired_hip_offset], device=self.device)
         self._support_feet_by_failed_leg = torch.tensor(
@@ -67,7 +68,7 @@ class FaultLocomotionEnv(DirectRLEnv):
             device=self.device,
         )
         self._body_masses = self._robot.data.body_mass.torch.clone()
-        
+
         # Periodic gait
         self._step_freq = torch.tensor(self.cfg.desired_step_freq, device=self.device)
         self._duty_factor = torch.tensor(self.cfg.desired_duty_factor, device=self.device)
@@ -99,7 +100,7 @@ class FaultLocomotionEnv(DirectRLEnv):
                 output_activation="identity",
             )
             self._rma_network.to(self.device)
-            
+
             if self.cfg.rma_use_latent_space:
                 self._rma_latent_encoder = FrozenRandomMlpEncoder(
                     cfg.rma_privileged_observation_space,
@@ -123,6 +124,7 @@ class FaultLocomotionEnv(DirectRLEnv):
 
         # Observation noise with a separate std for each term, see cfg.observation_noise_std.
         # The terms must follow the same order used to build the observations
+        self._height_map_global_bias = torch.zeros(self.num_envs, 1, device=self.device)
         if self.cfg.observation_noise_model:
             num_joints = cfg.action_space
             proprio_terms = [
@@ -171,14 +173,14 @@ class FaultLocomotionEnv(DirectRLEnv):
                 "undesired_contacts",
                 "action_rate_l2",
                 "action_smoothness_l2",
-                
+
                 "joints_hip_pos_l2",
                 "joints_thigh_pos_l2",
                 "joints_calf_pos_l2",
                 "joints_acc_l2",
                 "joints_torques_l2",
                 "joints_energy_l1",
-                
+
                 "feet_air_time",
                 "feet_air_time_variance",
                 "feet_height_clearance_aperiodic",
@@ -232,6 +234,13 @@ class FaultLocomotionEnv(DirectRLEnv):
             self._healthy_actuator_stiffness[joint_type] = actuator.stiffness.clone()
             self._healthy_actuator_damping[joint_type] = actuator.damping.clone()
 
+        if (
+            getattr(self.cfg, "visualize_edge_map", False)
+            or getattr(self.cfg, "visualize_feet_edge_swing_zone", False)
+            or getattr(self.cfg, "visualize_height_map_with_noise", False)
+        ):
+            self.set_debug_vis(True)
+
 
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
@@ -268,7 +277,7 @@ class FaultLocomotionEnv(DirectRLEnv):
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
         self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
         self._terrain = self.cfg.terrain.class_type(self.cfg.terrain)
-        
+
         # clone and replicate environments
         src, dest = "/World/envs/env_0", "/World/envs/env_{}"
         positions = cloner.grid_transforms(
@@ -283,7 +292,7 @@ class FaultLocomotionEnv(DirectRLEnv):
         # PhysX replication requires explicit collision filtering between environments.
         if "physx" in self.scene.physics_backend:
             self.scene.filter_collisions(global_prim_paths=[self.cfg.terrain.prim_path])
-        
+
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
@@ -294,7 +303,7 @@ class FaultLocomotionEnv(DirectRLEnv):
         self._previous_actions = self._actions.clone()
 
 
-        #rearrange actions if explicit expert with use_varying_action_space 
+        #rearrange actions if explicit expert with use_varying_action_space
         #to change with the number of experts, the action space you choose etc
         if(getattr(self.cfg, "use_varying_action_space", False)):
             legs_status =  (self._per_leg_joint_status.all(dim=2)).float()
@@ -307,7 +316,7 @@ class FaultLocomotionEnv(DirectRLEnv):
             actions[fl_down_mask, 0] = old_actions[fl_down_mask, 9]
             actions[fl_down_mask, 4] = old_actions[fl_down_mask, 10]
             actions[fl_down_mask, 8] = old_actions[fl_down_mask, 11]
-            
+
             actions[fl_down_mask, 1] = old_actions[fl_down_mask, 0]
             actions[fl_down_mask, 5] = old_actions[fl_down_mask, 1]
             actions[fl_down_mask, 9] = old_actions[fl_down_mask, 2]
@@ -325,7 +334,7 @@ class FaultLocomotionEnv(DirectRLEnv):
             actions[rl_down_mask, 0] = old_actions[rl_down_mask, 0]
             actions[rl_down_mask, 4] = old_actions[rl_down_mask, 1]
             actions[rl_down_mask, 8] = old_actions[rl_down_mask, 2]
-            
+
             actions[rl_down_mask, 1] = old_actions[rl_down_mask, 3]
             actions[rl_down_mask, 5] = old_actions[rl_down_mask, 4]
             actions[rl_down_mask, 9] = old_actions[rl_down_mask, 5]
@@ -342,7 +351,7 @@ class FaultLocomotionEnv(DirectRLEnv):
             actions[rl_rr_down_mask, 0] = old_actions[rl_rr_down_mask, 0]
             actions[rl_rr_down_mask, 4] = old_actions[rl_rr_down_mask, 1]
             actions[rl_rr_down_mask, 8] = old_actions[rl_rr_down_mask, 2]
-            
+
             actions[rl_rr_down_mask, 1] = old_actions[rl_rr_down_mask, 3]
             actions[rl_rr_down_mask, 5] = old_actions[rl_rr_down_mask, 4]
             actions[rl_rr_down_mask, 9] = old_actions[rl_rr_down_mask, 5]
@@ -354,10 +363,10 @@ class FaultLocomotionEnv(DirectRLEnv):
             actions[rl_rr_down_mask, 3] = old_actions[rl_rr_down_mask, 9]
             actions[rl_rr_down_mask, 7] = old_actions[rl_rr_down_mask, 10]
             actions[rl_rr_down_mask, 11] = old_actions[rl_rr_down_mask, 11]
-      
+
 
         self._actions = actions.clone()
-        
+
         # Clip the action
         self._actions = torch.clamp(self._actions, -self.cfg.desired_clip_actions, self.cfg.desired_clip_actions)
 
@@ -389,7 +398,7 @@ class FaultLocomotionEnv(DirectRLEnv):
         return noise_model
 
     def _get_observations(self) -> dict:
-        
+
         # Sample new commands if needed
         custom_events._get_new_random_commands(self)
 
@@ -403,7 +412,7 @@ class FaultLocomotionEnv(DirectRLEnv):
             # all the envs that are not moving, we put -1
             should_move = torch.norm(self._commands[:, :3], dim=1) > 0.01
             clock_data[:, :] = clock_data[:, :]*should_move.unsqueeze(1).expand(-1, 4) + -1.0* ~should_move.unsqueeze(1).expand(-1, 4)
-            
+
 
         # Choosing the main source of observation
         if(self.cfg.use_concurrent_state_est):
@@ -421,8 +430,8 @@ class FaultLocomotionEnv(DirectRLEnv):
             velocity_b = self._robot.data.root_lin_vel_b
             angular_velocity_b = self._robot.data.root_ang_vel_b
             projected_gravity_b = self._robot.data.projected_gravity_b
-        
-        
+
+
         # Standard Obs for the Actor/Critic
         obs = torch.cat(
             [
@@ -461,8 +470,7 @@ class FaultLocomotionEnv(DirectRLEnv):
 
 
         # Final observations dictionary
-        observations = {"policy": obs}    
-        
+        observations = {"policy": obs}
 
         # Critic OBS could be different if needed
         if(self.cfg.use_asymmetric_ppo):
@@ -479,6 +487,11 @@ class FaultLocomotionEnv(DirectRLEnv):
             height_data = height_data.clip(-1.0, 1.0)
             observations["policy"] = torch.cat((observations["policy"], height_data), dim=-1)
             observations["critic"] = torch.cat((observations["critic"], height_data), dim=-1)
+
+            if self.cfg.observation_noise_model:
+                global_noise_std = self.cfg.observation_noise_std["height_map_global"][0]
+                height_map_offset = self._height_map_global_bias + global_noise_std * torch.randn_like(self._height_map_global_bias)
+                observations["policy"] = torch.cat((observations["policy"][:, :-height_data.shape[1]], height_data + height_map_offset), dim=-1)
 
         # explicit expert_activation: scalar expert id
         # 0: all legs working
@@ -604,12 +617,12 @@ class FaultLocomotionEnv(DirectRLEnv):
 
         #is_rear_both = self._failure_type == 1
         legs_status = (self._per_leg_joint_status.all(dim=2)).float()
-        legs_status = legs_status.reshape(legs_status.shape[0], -1)   
+        legs_status = legs_status.reshape(legs_status.shape[0], -1)
         num_legs_down = (~legs_status.bool()).sum(dim=1)
-        is_rl_rr_all_failed = num_legs_down >= 2 
-        
+        is_rl_rr_all_failed = num_legs_down >= 2
+
         died = torch.where(is_rl_rr_all_failed, two_legs_died_check, died_check)
-        
+
         return died, time_out
 
 
@@ -624,11 +637,11 @@ class FaultLocomotionEnv(DirectRLEnv):
         env_ids = _to_torch_ids(env_ids)
         if env_ids is None or len(env_ids) == self.num_envs:
             env_ids = _to_torch_ids(self._robot._ALL_INDICES)
-            
+
             # Assignment of the failure case. We may want to assign them completely random,
             # or reserving some fixed number to some cases
             failure_type_activation_torch = torch.tensor(self.cfg.failure_type_activation, dtype=torch.float, device=self.device)
-            failure_type_activation_torch_prob = failure_type_activation_torch/failure_type_activation_torch.sum()            
+            failure_type_activation_torch_prob = failure_type_activation_torch/failure_type_activation_torch.sum()
             failure_activation_indices = torch.nonzero(failure_type_activation_torch > 0.0, as_tuple=False).squeeze(-1)
             self._failure_type = torch.multinomial(failure_type_activation_torch_prob, num_samples=self.num_envs, replacement=True)
 
@@ -660,7 +673,7 @@ class FaultLocomotionEnv(DirectRLEnv):
                 random_level_single_leg_failed = torch.randint_like(self._terrain.terrain_levels[single_leg_failed_ids], int(self._terrain.max_terrain_level//2.0))
                 self._terrain.terrain_levels[single_leg_failed_ids] = random_level_single_leg_failed
                 self._terrain.env_origins[single_leg_failed_ids] = self._terrain.terrain_origins[self._terrain.terrain_levels[single_leg_failed_ids], self._terrain.terrain_types[single_leg_failed_ids]]
-            
+
 
         self._robot.reset(env_ids)
         super()._reset_idx(env_ids)
@@ -674,11 +687,11 @@ class FaultLocomotionEnv(DirectRLEnv):
             self._healthy_actuator_stiffness[joint_type][env_ids] = actuator.stiffness[env_ids]
             self._healthy_actuator_damping[joint_type][env_ids] = actuator.damping[env_ids]
 
-        if len(env_ids) == self.num_envs: 
+        if len(env_ids) == self.num_envs:
             # Spread out the resets to avoid spikes in training when many environments reset at a similar time
             self.episode_length_buf[:] = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
-        
-        
+
+
         # Reset actions and action filtering
         self._actions[env_ids] = 0.0
         self._previous_actions[env_ids] = 0.0
@@ -687,7 +700,7 @@ class FaultLocomotionEnv(DirectRLEnv):
         # Reset swing peak
         self._swing_peak[env_ids] = torch.tensor([0.0, 0.0, 0.0, 0.0], device=self.device)
         self._swing_peak_periodic[env_ids] = torch.tensor([0.0, 0.0, 0.0, 0.0], device=self.device)
-        
+
         # Reset contact periodic
         self._phase_signal[env_ids] = self._phase_offset[env_ids].clone()# + self.step_dt * self._step_freq * torch.rand(env_ids.shape[0], 1, device=self.device)*10.
         self._phase_signal[env_ids] = self._phase_signal[env_ids]  % 1.0
@@ -695,12 +708,17 @@ class FaultLocomotionEnv(DirectRLEnv):
         # Reset observation history
         self._observation_history[env_ids] *= 0.0
 
+        # Resample the global height map bias
+        if self.cfg.observation_noise_model:
+            global_bias_std = self.cfg.observation_noise_std["height_map_global"][1]
+            self._height_map_global_bias[env_ids] = global_bias_std * torch.randn(len(env_ids), 1, device=self.device)
+
         # Reset obs and noise concurrent
         if(self.cfg.use_concurrent_state_est):
             self._observation_history_concurrent_state_est[env_ids] *= 0.0
             if self.cfg.observation_noise_model:
                 self._observation_noise_model_concurrent_state_est.reset(env_ids)
-        
+
         # Reset obs and noise rma
         if(self.cfg.use_rma):
             self._observation_history_rma[env_ids] *= 0.0
@@ -719,7 +737,7 @@ class FaultLocomotionEnv(DirectRLEnv):
 
         # Reset commands
         custom_events._get_new_random_commands(self, env_ids)
-        
+
         # Logging
         extras = dict()
         for key in self._episode_sums.keys():
@@ -736,11 +754,18 @@ class FaultLocomotionEnv(DirectRLEnv):
         extras = dict()
         extras["Episode_Termination/base_contact"] = torch.count_nonzero(self.reset_terminated[env_ids]).item()
         extras["Episode_Termination/time_out"] = torch.count_nonzero(self.reset_time_outs[env_ids]).item()
-        
+
         if(self._terrain.cfg.terrain_generator is not None and self._terrain.cfg.terrain_generator.curriculum == True):
             extras["Episode_Curriculum/terrain_levels"] = torch.mean(self._terrain.terrain_levels.float())
-        
+
         self.extras["log"].update(extras)
 
         # Set the event failure
         custom_events._failures_event_setter(self, env_ids, self._failure_type)
+
+    def _set_debug_vis_impl(self, debug_vis: bool):
+        custom_visualizations._set_debug_vis_impl(self, debug_vis)
+
+
+    def _debug_vis_callback(self, event):
+        custom_visualizations._debug_vis_callback(self, event)

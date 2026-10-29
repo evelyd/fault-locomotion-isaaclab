@@ -2,6 +2,64 @@ import torch
 
 import isaaclab.utils.math as math_utils
 
+def _has_edge_map(self) -> bool:
+    return hasattr(self, "_edge_height_scanner")
+
+def _compute_edge_map(self) -> tuple[torch.Tensor, float, int, int]:
+    height_grid, height_map_resolution, height_map_x_points, height_map_y_points = _get_edge_height_grid(self)
+
+    edge_map = torch.zeros_like(height_grid, dtype=torch.bool)
+
+    x_edges = torch.abs(height_grid[:, :, 1:] - height_grid[:, :, :-1]) > self.cfg.feet_edge_height_threshold
+    edge_map[:, :, :-1] |= x_edges
+    edge_map[:, :, 1:] |= x_edges
+
+    y_edges = torch.abs(height_grid[:, 1:, :] - height_grid[:, :-1, :]) > self.cfg.feet_edge_height_threshold
+    edge_map[:, :-1, :] |= y_edges
+    edge_map[:, 1:, :] |= y_edges
+
+    edge_map = F.max_pool2d(
+        edge_map.unsqueeze(1).float(),
+        kernel_size=2 * self.cfg.feet_edge_radius_px + 1,
+        stride=1,
+        padding=self.cfg.feet_edge_radius_px,
+    ).squeeze(1).bool()
+
+    return edge_map, height_map_resolution, height_map_x_points, height_map_y_points
+
+
+def _get_riser_grid(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, float]:
+    """Return the riser tops of the edge height grid (the high side of an edge), the height of each cell, the height
+    of the floor at its base and the grid resolution. The grids have shape (num_envs, y_points, x_points)."""
+    height_grid, height_map_resolution, _, _ = _get_edge_height_grid(self)
+
+    # Riser tops: cells higher than one of their neighbors by more than the edge threshold
+    riser_top = torch.zeros_like(height_grid, dtype=torch.bool)
+    x_steps = height_grid[:, :, 1:] - height_grid[:, :, :-1]
+    riser_top[:, :, 1:] |= x_steps > self.cfg.feet_edge_height_threshold
+    riser_top[:, :, :-1] |= -x_steps > self.cfg.feet_edge_height_threshold
+    y_steps = height_grid[:, 1:, :] - height_grid[:, :-1, :]
+    riser_top[:, 1:, :] |= y_steps > self.cfg.feet_edge_height_threshold
+    riser_top[:, :-1, :] |= -y_steps > self.cfg.feet_edge_height_threshold
+
+    # Riser bases: the lowest neighbor of each cell, i.e. the floor in front of the riser face
+    padded_grid = F.pad(height_grid.unsqueeze(1), (1, 1, 1, 1), mode="replicate").squeeze(1)
+    riser_base_height = torch.minimum(
+        torch.minimum(padded_grid[:, 1:-1, :-2], padded_grid[:, 1:-1, 2:]),
+        torch.minimum(padded_grid[:, :-2, 1:-1], padded_grid[:, 2:, 1:-1]),
+    )
+    return riser_top, height_grid, riser_base_height, height_map_resolution
+
+def _get_edge_height_grid(self) -> tuple[torch.Tensor, float, int, int]:
+    height_data_scanner = self._edge_height_scanner.data.ray_hits_w[..., 2]
+    height_data_scanner = torch.nan_to_num(height_data_scanner, nan=0.0, posinf=1.0, neginf=-1.0)
+    height_data_scanner = torch.clip(height_data_scanner, min=-5, max=5)
+
+    height_map_resolution = self._edge_height_scanner.cfg.pattern_cfg.resolution
+    height_map_x_points = int(round(self._edge_height_scanner.cfg.pattern_cfg.size[0] / height_map_resolution)) + 1
+    height_map_y_points = int(round(self._edge_height_scanner.cfg.pattern_cfg.size[1] / height_map_resolution)) + 1
+    height_grid = height_data_scanner.reshape(self.num_envs, height_map_y_points, height_map_x_points)
+    return height_grid, height_map_resolution, height_map_x_points, height_map_y_points
 
 def _get_feet_terrain_heights(self) -> torch.Tensor:
     """Return the mean terrain height from the local height map around each foot."""
@@ -270,7 +328,7 @@ def joints_energy_l1(self):
 
 
 def feet_air_time(self) -> torch.Tensor:
-    
+
     legs_status = (self._per_leg_joint_status.all(dim=2)).float()
     legs_status = legs_status.reshape(legs_status.shape[0], -1)
 
