@@ -35,9 +35,12 @@ if os.environ.get("FAULT_LOCOMOTION_ROS2_SOURCED") != "1":
     os.execv("/bin/bash", ["bash", "-c", cmd])
 
 
-import rclpy 
-from rclpy.node import Node 
+import rclpy
+from rclpy.node import Node
 from dls2_interface.msg import BaseState, BlindState, Imu, TrajectoryGenerator, FeetContactState
+from visualization_msgs.msg import Marker, MarkerArray
+from gym_quadruped.sensors.heightmap import HeightMap
+from gym_quadruped.utils.mujoco.visual import render_sphere
 
 import time
 import numpy as np
@@ -51,7 +54,7 @@ from gym_quadruped.utils.quadruped_utils import LegsAttr
 # Config imports
 import config as cfg
 
-import os 
+import os
 dir_path = os.path.dirname(os.path.realpath(__file__))
 # Set the priority of the process
 pid = os.getpid()
@@ -94,14 +97,33 @@ class Simulator_Node(Node):
             base_vel_command_type="human"
         )
         self.env.reset(random=False)
-        
+
+        self.publisher_heightmap = self.create_publisher(MarkerArray, "/height_scan_markers", 1)
+
+        pattern_cfg = cfg.training_env["perceptive_height_scanner"]["pattern_cfg"]
+        resolution_heightmap = pattern_cfg["resolution"]
+        self.num_rows_heightmap = round(pattern_cfg["size"][0] / resolution_heightmap) + 1
+        self.num_cols_heightmap = round(pattern_cfg["size"][1] / resolution_heightmap) + 1
+
+        self.heightmap_offset = np.array(cfg.training_env["perceptive_height_scanner"]["offset"]["pos"])
+
+        self.heightmap = HeightMap(
+            num_rows=self.num_rows_heightmap,
+            num_cols=self.num_cols_heightmap,
+            dist_x=resolution_heightmap,
+            dist_y=resolution_heightmap,
+            mj_model=self.env.mjModel,
+            mj_data=self.env.mjData,
+        )
+        self.heightmap_publish_counter = 0
+
 
         self.last_render_time = time.time()
-        self.env.render()  
+        self.env.render()
         self.env.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = False
         self.env.viewer.user_scn.flags[mujoco.mjtRndFlag.mjRND_REFLECTION] = False
 
-        # Desired PD 
+        # Desired PD
         self.desired_joints_position = LegsAttr(*[np.zeros((int(self.env.mjModel.nu/4), 1)) for _ in range(4)])
         self.desired_joints_velocity = LegsAttr(*[np.zeros((int(self.env.mjModel.nu/4), 1)) for _ in range(4)])
 
@@ -121,7 +143,7 @@ class Simulator_Node(Node):
 
         self.Kp = np.array(msg.kp)
         self.Kd = np.array(msg.kd)
-        
+
 
     def compute_simulator_step_callback(self):
 
@@ -129,6 +151,74 @@ class Simulator_Node(Node):
         base_lin_vel = self.env.base_lin_vel(frame='world')
         base_ang_vel = self.env.base_ang_vel(frame='base')
         base_pos = self.env.base_pos
+
+        # Publish Heightmap ------------------------------------------------
+        self.heightmap_publish_counter += 1
+        if self.heightmap_publish_counter >= 10:  # 500Hz / 10 = 50Hz
+            self.heightmap_publish_counter = 0
+
+            base_pos = self.env.base_pos
+            yaw = self.env.base_ori_euler_xyz[2]
+
+            yaw_rot_mat = np.array([
+                [np.cos(yaw), -np.sin(yaw), 0.0],
+                [np.sin(yaw),  np.cos(yaw), 0.0],
+                [0.0,          0.0,         1.0]
+            ])
+
+            # Apply ONLY the X and Y offsets.
+            # We ignore the Z offset (2.0) so MuJoCo's ground raycaster doesn't start too high.
+            xy_offset = np.array([self.heightmap_offset[0], self.heightmap_offset[1], 0.0])
+            shifted_base_pos = base_pos + yaw_rot_mat @ xy_offset
+
+            self.heightmap.update_height_map(shifted_base_pos, yaw=yaw)
+
+            # 1. Calculate inverse rotation to convert World -> Local
+            base_quat_wxyz = self.env.mjData.qpos[3:7]
+            rotation = np.empty(9, dtype=np.float64)
+            mujoco.mju_quat2Mat(rotation, base_quat_wxyz)
+
+            # Transpose the rotation matrix to get its inverse
+            R_inv = rotation.reshape(3, 3).T
+
+            marker_array = MarkerArray()
+            marker_id = 0
+
+            for i in range(self.num_rows_heightmap):
+                for j in range(self.num_cols_heightmap):
+                    marker = Marker()
+                    marker.header.frame_id = "base_link" # Set semantically correct frame
+                    marker.header.stamp = self.get_clock().now().to_msg()
+                    marker.ns = "heightmap"
+                    marker.id = marker_id
+                    marker.type = Marker.SPHERE
+                    marker.action = Marker.ADD
+
+                    pos = self.heightmap.data[i][j]
+                    if len(pos.shape) > 1:
+                        pos = pos[0]
+
+                    # 2. Transform the world point into a local point
+                    pos_local = R_inv @ (pos - base_pos)
+
+                    # 3. Publish the local point
+                    marker.pose.position.x = float(pos_local[0])
+                    marker.pose.position.y = float(pos_local[1])
+                    marker.pose.position.z = float(pos_local[2])
+
+                    marker.scale.x = 0.02
+                    marker.scale.y = 0.02
+                    marker.scale.z = 0.02
+
+                    marker.color.r = 0.0
+                    marker.color.g = 1.0
+                    marker.color.b = 0.0
+                    marker.color.a = 0.5
+
+                    marker_array.markers.append(marker)
+                    marker_id += 1
+
+            self.publisher_heightmap.publish(marker_array)
 
         # Publish Base State ------------------------------------------------
         base_state_msg = BaseState()
@@ -192,6 +282,16 @@ class Simulator_Node(Node):
             self.env.render()
             self.last_render_time = time.time()
 
+            if self.heightmap.data is not None:
+                for i in range(self.heightmap.data.shape[0]):
+                    for j in range(self.heightmap.data.data.shape[1]):
+                        self.heightmap.geom_ids[i, j] = render_sphere(
+                            viewer=self.env.viewer,
+                            position=([self.heightmap.data[i][j][0][0], self.heightmap.data[i][j][0][1], self.heightmap.data[i][j][0][2]]),
+                            diameter=0.02,
+                            color=[0, 1, 0, 0.5],
+                            geom_id=self.heightmap.geom_ids[i, j],
+                        )
 
 def main():
     print('Hello from the gym_quadruped simulator.')
