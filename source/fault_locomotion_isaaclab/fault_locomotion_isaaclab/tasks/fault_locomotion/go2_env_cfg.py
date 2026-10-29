@@ -564,4 +564,5 @@ class Go2RoughVisionEnvCfg(Go2RoughBlindEnvCfg):
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.2, 1.2]),
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
+        global_world_only=True,
     )
