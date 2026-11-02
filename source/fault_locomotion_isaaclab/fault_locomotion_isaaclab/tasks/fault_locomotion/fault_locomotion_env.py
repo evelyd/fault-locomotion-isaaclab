@@ -663,14 +663,14 @@ class FaultLocomotionEnv(DirectRLEnv):
             # rl-rr failed
             rear_failed_ids = env_ids[self._failure_type[env_ids] == 1]
             if rear_failed_ids.numel() > 0:
-                random_level_rear_failed = torch.randint_like(self._terrain.terrain_levels[rear_failed_ids], int(self._terrain.max_terrain_level//3.5))
+                random_level_rear_failed = torch.randint_like(self._terrain.terrain_levels[rear_failed_ids], int(self._terrain.max_terrain_level)) #//3.5
                 self._terrain.terrain_levels[rear_failed_ids] = random_level_rear_failed
                 self._terrain.env_origins[rear_failed_ids] = self._terrain.terrain_origins[self._terrain.terrain_levels[rear_failed_ids], self._terrain.terrain_types[rear_failed_ids]]
 
             # single leg failed (fl, fr, rl, rr)
             single_leg_failed_ids = env_ids[(self._failure_type[env_ids] != 0) & (self._failure_type[env_ids] != 1)]
             if single_leg_failed_ids.numel() > 0:
-                random_level_single_leg_failed = torch.randint_like(self._terrain.terrain_levels[single_leg_failed_ids], int(self._terrain.max_terrain_level//2.0))
+                random_level_single_leg_failed = torch.randint_like(self._terrain.terrain_levels[single_leg_failed_ids], int(self._terrain.max_terrain_level)) #//2.0
                 self._terrain.terrain_levels[single_leg_failed_ids] = random_level_single_leg_failed
                 self._terrain.env_origins[single_leg_failed_ids] = self._terrain.terrain_origins[self._terrain.terrain_levels[single_leg_failed_ids], self._terrain.terrain_types[single_leg_failed_ids]]
 
