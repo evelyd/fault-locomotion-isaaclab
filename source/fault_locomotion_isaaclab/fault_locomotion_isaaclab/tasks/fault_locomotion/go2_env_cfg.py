@@ -191,7 +191,7 @@ class Go2FlatEnvCfg(DirectRLEnvCfg):
 
     use_imu = False
 
-    use_concurrent_state_est = True
+    use_concurrent_state_est = False
     if(use_concurrent_state_est):
         concurrent_state_est_network_type = "tcn" # "mlp" or "tcn"
 
